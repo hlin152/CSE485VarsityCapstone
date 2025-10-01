@@ -1,8 +1,8 @@
 # CSE485VarsityCapstone
-ASU CSE485 Capstone Project - Varsity Media Foundation - app/database development and maintenance
+ASU CSE485 Capstone Project - Varsity Media Foundation - app/database development and maintenance <br><br>
 
 
-Team Member: Carson Gardner, Violet Stinson, Hsuan-Jun Lin, Jaskirat Singh, Shriman Oppilamani
-Former Team Member Assistence: Aidan Lei
-Sponsor: Vince D'Aliesio
-Instructor/Grader: Venkatesh Mishra
+Team Member: Carson Gardner, Violet Stinson, Hsuan-Jun Lin, Jaskirat Singh, Shriman Oppilamani <br>
+Former Team Member Assistence: Aidan Lei <br>
+Sponsor: Vince D'Aliesio <br>
+Instructor/Grader: Venkatesh Mishra <br>
