@@ -11,6 +11,7 @@ Sprint 1: Sep 23, 2025 - Sep 30, 2025 <br>
 Scrum Master: Hsuan-Jun Lin <br>
 Sprint 2: Oct 07, 2025 - Oct 15, 2025<br>
 Scrum Master: Violet Stinson <br>
-Sprint 3: <br>
+Sprint 3: Oct 21, 2025 - Oct 28, 2025<br>
+Scrum Master: Carson Gardner <br>
 Sprint 4: <br>
 Sprint 5: <br>
