@@ -7,5 +7,5 @@ Former Team Member Assistence: Aidan Lei <br>
 Sponsor: Vince D'Aliesio <br>
 Instructor/Grader: Venkatesh Mishra <br>
 
-Sprint 3: Oct 21, 2025 - Oct 28, 2025
+Sprint 3: Oct 21, 2025 - Oct 28, 2025 <br>
 Scrum Master: Carson Gardner <br>
