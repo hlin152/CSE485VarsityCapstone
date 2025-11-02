@@ -7,13 +7,5 @@ Former Team Member Assistence: Aidan Lei <br>
 Sponsor: Vince D'Aliesio <br>
 Instructor/Grader: Venkatesh Mishra <br>
 
-Sprint 1: Sep 23, 2025 - Sep 30, 2025 <br>
-Scrum Master: Hsuan-Jun Lin <br>
-Sprint 2: Oct 07, 2025 - Oct 15, 2025<br>
-Scrum Master: Violet Stinson <br>
-Sprint 3: Oct 21, 2025 - Oct 28, 2025<br>
-Scrum Master: Carson Gardner <br>
 Sprint 4: Nov 04, 2025 - Nov 11, 2025<br>
 Scrum Master: Shriman Oppilamani <br>
-Sprint 5: Nov 18, 2025 - Nov 25, 2025<br>
-Scrum Master: Jaskirat Singh <br>
