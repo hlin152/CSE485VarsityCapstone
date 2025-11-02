@@ -13,5 +13,7 @@ Sprint 2: Oct 07, 2025 - Oct 15, 2025<br>
 Scrum Master: Violet Stinson <br>
 Sprint 3: Oct 21, 2025 - Oct 28, 2025<br>
 Scrum Master: Carson Gardner <br>
-Sprint 4: <br>
-Sprint 5: <br>
+Sprint 4: Nov 04, 2025 - Nov 11, 2025<br>
+Scrum Master: Shriman Oppilamani <br>
+Sprint 5: Nov 18, 2025 - Nov 25, 2025<br>
+Scrum Master: Jaskirat Singh <br>
