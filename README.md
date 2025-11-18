@@ -8,4 +8,4 @@ Sponsor: Vince D'Aliesio <br>
 Instructor/Grader: Venkatesh Mishra <br>
 
 Sprint 5: Nov 18, 2025 - Nov 25, 2025<br>
-Scrum Master: Jaskirat Singh <br>
+Scrum Master: Hsuan-Jun Lin <br>
