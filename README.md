@@ -16,4 +16,4 @@ Scrum Master: Carson Gardner <br>
 Sprint 4: Nov 04, 2025 - Nov 11, 2025<br>
 Scrum Master: Shriman Oppilamani <br>
 Sprint 5: Nov 18, 2025 - Nov 25, 2025<br>
-Scrum Master: Jaskirat Singh <br>
+Scrum Master: Hsuan-Jun Lin <br>
