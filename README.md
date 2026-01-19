@@ -7,5 +7,5 @@ Former Team Member Assistence: Aidan Lei <br>
 Sponsor: Vince D'Aliesio <br>
 Instructor/Grader:  <br>
 
-Sprint 6: Jan 26, 2026 - Feb 06, 2026 <br>
+Sprint 8: Feb 23, 2026 - Mar 06, 2026 <br>
 Scrum Master:  <br>
