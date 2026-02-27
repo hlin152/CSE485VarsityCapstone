@@ -1,0 +1,702 @@
+<!--
+  @Author: Hsuan-Jun (Raymond) Lin
+  @Class: ASU CSE 486 Capstone Project - Varsity Sports Show
+  @Title: Scoreboard
+  @Purpose: Sponsor would like to use Scoreboard HTML on OBS for live-stream Overlay
+  @SportSupported: Football, Basketball, Lacrosse, Volleyball, Hockey
+  @Version: 3.1
+  @Update: Remove Game Status
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VSS Scoreboard Overlay</title>
+  <style>
+    :root {
+      --bar-h: 85px;
+      --bar-w: 1160px;
+      --radius: 12px;
+      --team-color-left: #1e40af;
+      --team-color-right: #dc2626;
+      --bg-primary: rgba(15, 23, 42, 0.95);
+      --bg-secondary: rgba(30, 41, 59, 0.95);
+      --bg-accent: rgba(255, 255, 255, 0.08);
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.85);
+      --text-muted: rgba(255, 255, 255, 0.65);
+      --score-bg: #0f172a;
+      --score-text: #ffffff;
+      --clock-active: #10b981;
+      --clock-paused: #f59e0b;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* OBS Browser Source */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    .scoreboard-container {
+      position: absolute;
+      left: 50%;
+      top: auto;
+      bottom: 80px; /* Change the bottom height if needed on OBS */
+      transform: translateX(-50%);
+      width: var(--bar-w);
+      height: var(--bar-h);
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: grid;
+      grid-template-columns: 80px 1fr 180px 1fr 80px;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Sponsor/League Section */
+    .sponsor-section,
+    .league-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-accent);
+    }
+
+    .sponsor-section {
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .league-section {
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sponsor-logo,
+    .league-logo {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      filter: brightness(1.1);
+    }
+
+    /* Team Sections */
+    .team-section {
+      display: grid;
+      align-items: center;
+      position: relative;
+    }
+
+    .team-left {
+      background: linear-gradient(90deg, rgba(30, 64, 175, 0.15) 0%, transparent 100%);
+      grid-template-columns: minmax(0, 1fr) auto;
+      padding: 0 5px 0 15px;
+    }
+
+    .team-right {
+      background: linear-gradient(90deg, transparent 0%, rgba(220, 38, 38, 0.15) 100%);
+      grid-template-columns: auto 1fr;
+      padding: 0 15px 0 5px;
+    }
+
+    .team-info {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    .team-left .team-info {
+      flex-direction: row;
+      justify-content: flex-start;
+    }
+
+    .team-right .team-info {
+      flex-direction: row-reverse;
+      justify-content: flex-start;
+    }
+
+    .team-logo {
+      width: 54px;
+      height: 54px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .team-logo:hover {
+      transform: scale(1.05);
+    }
+
+    .team-name-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      flex: 1;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .team-left .team-name-container {
+      padding-right: 10px;
+    }
+
+    .team-right .team-name-container {
+      padding-left: 10px;
+      text-align: right;
+    }
+
+    .team-name {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+      width: 100%;
+    }
+
+    .team-right .team-name {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-align: right;
+    }
+
+    .team-record {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+
+    .team-right .team-record {
+      text-align: right;
+    }
+
+    /* Score Display */
+    .score-display {
+      width: 90px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Oswald', 'Impact', 'Arial Black', sans-serif;
+      font-weight: 700;
+      font-size: 58px;
+      color: var(--score-text);
+      background: var(--score-bg);
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .team-left .score-display {
+      border-left: 3px solid var(--team-color-left);
+      margin-left: 5px;
+    }
+
+    .team-right .score-display {
+      border-right: 3px solid var(--team-color-right);
+      margin-right: 5px;
+    }
+
+    .score-display::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    }
+
+    /* Center Clock Section */
+    .center-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-accent);
+      padding: 8px 10px;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      min-width: 180px;
+    }
+
+    .clock-display {
+      font-family: 'Roboto Mono', 'Courier New', monospace;
+      font-weight: 600;
+      font-size: 28px;
+      color: var(--clock-active);
+      margin-bottom: 2px;
+      text-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+      transition: var(--transition);
+    }
+
+    .clock-display.paused {
+      color: var(--clock-paused);
+      text-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+    }
+
+    .sport-display,
+    .period-display {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .game-status {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+      letter-spacing: 0.5px;
+    }
+    
+    .game-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      white-space: nowrap;
+    }
+
+    /* Team colors for long names */
+    .team-right.long-name .team-name {
+      font-size: 16px;
+      letter-spacing: 0.4px;
+    }
+
+    .team-right.long-name .team-logo {
+      width: 50px;
+      height: 50px;
+    }
+
+    /* Animation for score updates */
+    @keyframes scorePulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .score-update {
+      animation: scorePulse 0.4s ease;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1150px) {
+      :root {
+        --bar-w: 100vw;
+      }
+      
+      .scoreboard-container {
+        grid-template-columns: 70px 1fr 170px 1fr 70px;
+      }
+      
+      .score-display {
+        width: 100px;
+        font-size: 52px;
+      }
+      
+      .team-logo {
+        width: 50px;
+        height: 50px;
+      }
+      
+      .team-name {
+        font-size: 17px;
+      }
+      
+      .team-right .team-name {
+        font-size: 16px;
+      }
+      
+      .center-section {
+        min-width: 170px;
+      }
+      
+      .clock-display {
+        font-size: 28px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .scoreboard-container {
+        grid-template-columns: 70px 1fr 160px 1fr 70px;
+      }
+      
+      .score-display {
+        width: 90px;
+        font-size: 48px;
+      }
+      
+      .team-logo {
+        width: 46px;
+        height: 46px;
+      }
+      
+      .team-name {
+        font-size: 16px;
+      }
+      
+      .team-right .team-name {
+        font-size: 15px;
+      }
+      
+      .center-section {
+        min-width: 160px;
+      }
+      
+    .clock-display {
+      font-size: 26px;
+    }
+    
+    .sport-display,
+    .period-display {
+      font-size: 14px;
+    }
+    }
+
+    /* Hide broken/empty images */
+    img[src=""], img:not([src]) {
+      display: none;
+    }
+
+
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="scoreboard-container">
+    <!-- Left Sponsor/League Logo -->
+    <div class="sponsor-section">
+      <img id="sponsorLogo" class="sponsor-logo" src="" alt="Sponsor Logo" />
+    </div>
+
+    <!-- Left Team -->
+    <div class="team-section team-left">
+      <div class="team-info">
+        <img id="teamALogo" class="team-logo" src="" alt="Team A Logo" />
+        <div class="team-name-container">
+          <div class="team-name" id="teamAName"></div>
+          <div class="team-record" id="teamARecord"></div>
+        </div>
+      </div>
+      <div class="score-display" id="scoreA"></div>
+    </div>
+
+    <!-- Center Clock/Period -->
+    <div class="center-section">
+      <div class="clock-display" id="time"></div>
+      <div class="sport-display" id="sportsType"></div>
+      <div class="period-display" id="period"></div>
+    </div>
+
+    <!-- Right Team -->
+    <div class="team-section team-right" id="rightTeamSection">
+      <div class="score-display" id="scoreB"></div>
+      <div class="team-info">
+        <img id="teamBLogo" class="team-logo" src="" alt="Team B Logo" />
+        <div class="team-name-container">
+          <div class="team-name" id="teamBName"></div>
+          <div class="team-record" id="teamBRecord"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right League Logo -->
+    <div class="league-section">
+      <img id="leagueLogo" class="league-logo" src="" alt="League Logo" />
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      teamAName: "",
+      teamBName: "",
+      teamARecord: "",
+      teamBRecord: "",
+      scoreA: "0",
+      scoreB: "0",
+      time: "10:00",
+      period: "Q1",
+      sportsType: "",
+      sponsorLogo: "",
+      leagueLogo: "",
+      teamALogo: "",
+      teamBLogo: "",
+      clockRunning: false,
+      teamAColor: "#1e40af",
+      teamBColor: "#dc2626",
+      // New: Local timer state for the scoreboard
+      localClockRunning: false,
+      localClockSeconds: 600, // 10 minutes
+      lastSyncTime: 0
+    };
+
+    // Local timer variables
+    let localTimer = null;
+    let lastConfigClockSeconds = 600;
+
+    // Check for long team names
+    function checkTeamNameLength() {
+      const teamBName = state.teamBName || "";
+      const rightSection = $("rightTeamSection");
+      
+      if (teamBName.length > 10) {
+        rightSection.classList.add("long-name");
+      } else {
+        rightSection.classList.remove("long-name");
+      }
+    }
+
+    // Apply team colors
+    function applyTeamColors() {
+      document.documentElement.style.setProperty('--team-color-left', state.teamAColor);
+      document.documentElement.style.setProperty('--team-color-right', state.teamBColor);
+    }
+
+    // Parse MM:SS time format to seconds
+    function parseTimeToSeconds(timeStr) {
+      if (!timeStr) return 600;
+      const parts = timeStr.split(':');
+      if (parts.length !== 2) return 600;
+      const minutes = parseInt(parts[0]) || 0;
+      const seconds = parseInt(parts[1]) || 0;
+      return minutes * 60 + seconds;
+    }
+
+    // Format seconds to MM:SS
+    function formatSecondsToTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Rendering functions
+    function setText(id, value, animate = false) {
+      const el = $(id);
+      if (!el) return;
+      
+      const currentValue = el.textContent;
+      const newValue = (value === null || value === undefined) ? "" : String(value);
+      
+      if (animate && (id === "scoreA" || id === "scoreB") && currentValue !== newValue) {
+        el.classList.add("score-update");
+        setTimeout(() => el.classList.remove("score-update"), 400);
+      }
+      
+      el.textContent = newValue;
+      
+      if (id === "teamBName") {
+        setTimeout(checkTeamNameLength, 10);
+      }
+    }
+
+
+    function setImg(id, src) {
+      const el = $(id);
+      if (!el) return;
+      const v = (src === null || src === undefined) ? "" : String(src).trim();
+      el.setAttribute("src", v);
+    }
+
+    function updateClockDisplay() {
+      const clockEl = $("time");
+      // Use local timer state, not config.json state
+      if (state.localClockRunning) {
+        clockEl.classList.remove("paused");
+      } else {
+        clockEl.classList.add("paused");
+      }
+    }
+
+    function render() {
+      // Template switch: CSS handles visibility based on body[data-sport]
+      document.body.dataset.sport = String(state.sportsType || "").toUpperCase();
+
+      setText("teamAName", state.teamAName);
+      setText("teamBName", state.teamBName);
+      setText("teamARecord", state.teamARecord);
+      setText("teamBRecord", state.teamBRecord);
+      setText("scoreA", state.scoreA, true);
+      setText("scoreB", state.scoreB, true);
+      
+      // Display local timer time
+      setText("time", formatSecondsToTime(state.localClockSeconds));
+      
+      setText("sportsType", state.sportsType);
+      setText("period", state.period);
+      setImg("sponsorLogo", state.sponsorLogo);
+      setImg("leagueLogo", state.leagueLogo);
+      setImg("teamALogo", state.teamALogo);
+      setImg("teamBLogo", state.teamBLogo);
+      
+      updateClockDisplay();
+      checkTeamNameLength();
+      applyTeamColors();
+    }
+
+    // Sync timer state from control panel
+    function syncTimerFromConfig() {
+      // Read time from config.json
+      const configSeconds = parseTimeToSeconds(state.time);
+      
+      // If the control panel timer is running and time has changed, sync to local timer
+      if (state.clockRunning && Math.abs(configSeconds - lastConfigClockSeconds) <= 2) {
+        // Control panel is counting down, start local timer
+        if (!state.localClockRunning) {
+          startLocalTimer(configSeconds);
+        }
+        // Minor correction to local timer to ensure synchronization
+        if (Math.abs(configSeconds - state.localClockSeconds) > 2) {
+          state.localClockSeconds = configSeconds;
+          render();
+        }
+      } else if (!state.clockRunning) {
+        // Control panel is paused, stop local timer and sync time
+        stopLocalTimer();
+        state.localClockSeconds = configSeconds;
+        render();
+      }
+      
+      lastConfigClockSeconds = configSeconds;
+    }
+
+    // Start local timer
+    function startLocalTimer(startSeconds) {
+      if (state.localClockRunning) return;
+      
+      state.localClockRunning = true;
+      state.localClockSeconds = startSeconds || state.localClockSeconds;
+      
+      // Clear existing timer
+      if (localTimer) clearInterval(localTimer);
+      
+      // Start new timer
+      localTimer = setInterval(() => {
+        if (state.localClockSeconds > 0) {
+          state.localClockSeconds--;
+          render();
+        } else {
+          // Time's up
+          stopLocalTimer();
+          render();
+        }
+      }, 1000);
+      
+      render();
+    }
+
+    // Stop local timer
+    function stopLocalTimer() {
+      state.localClockRunning = false;
+      if (localTimer) {
+        clearInterval(localTimer);
+        localTimer = null;
+      }
+      render();
+    }
+
+    // Reset local timer
+    function resetLocalTimer(minutes = 10, seconds = 0) {
+      stopLocalTimer();
+      state.localClockSeconds = minutes * 60 + seconds;
+      render();
+    }
+
+    // Public API
+    function set(partial) {
+      if (!partial || typeof partial !== "object") return;
+
+      for (const k of Object.keys(state)) {
+        if (k in partial) state[k] = partial[k];
+      }
+      
+      // Sync timer state
+      syncTimerFromConfig();
+      
+      render();
+    }
+
+    function getState() {
+      return { ...state };
+    }
+
+    // Config Loader
+    async function loadConfig() {
+      try {
+        const res = await fetch("config.json?ts=" + Date.now());
+        const cfg = await res.json();
+
+        const updates = {
+          teamAName: cfg.teamAName,
+          teamBName: cfg.teamBName,
+          teamARecord: cfg.teamARecord,
+          teamBRecord: cfg.teamBRecord,
+          scoreA: cfg.scoreA,
+          scoreB: cfg.scoreB,
+          time: cfg.startTime || cfg.time,
+          period: cfg.period,
+          sportsType: cfg.sportsType,
+          teamALogo: cfg.teamALogo,
+          teamBLogo: cfg.teamBLogo,
+          sponsorLogo: cfg.sponsorLogo,
+          leagueLogo: cfg.leagueLogo,
+          teamAColor: cfg.teamAColor,
+          teamBColor: cfg.teamBColor,
+          clockRunning: cfg.clockRunning
+        };
+
+        // Remove undefined values
+        Object.keys(updates).forEach(key => {
+          if (updates[key] === undefined) delete updates[key];
+        });
+
+        set(updates);
+
+      } catch (e) {
+        console.debug("Config load failed");
+      }
+    }
+
+    // Initialize
+    window.VSSScoreboard = {
+      set,
+      getState,
+      clock: {
+        start: (minutes, seconds) => startLocalTimer((minutes || 10) * 60 + (seconds || 0)),
+        stop: stopLocalTimer,
+        reset: resetLocalTimer
+      },
+      loadConfig
+    };
+
+    // Initial render and config load
+    render();
+    loadConfig();
+    
+    // Check for config.json updates more frequently (4 times per second to reduce delay)
+    setInterval(loadConfig, 250);
+  </script>
+</body>
+</html>
