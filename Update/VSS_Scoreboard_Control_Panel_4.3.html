@@ -1,0 +1,1702 @@
+<!--
+  @Author: Hsuan-Jun (Raymond) Lin
+  @Class: ASU CSE 486 Capstone Project - Varsity Sports Show
+  @Title: VSS Scoreboard Control Panel
+  @Purpose: Customize Control UI Panel to let sponsor modify the game info while live-stream
+  @SportSupported: Football, Basketball, Lacrosse, Volleyball, Hockey
+  @Version: 4.3
+  @Update: Optimize Control Panel UI
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VSS Scoreboard Control Panel</title>
+  <meta name="vss-version" content="" id="versionMeta" />
+  <style>
+    body::before {
+      display: none;
+      content: "VSS Version: " attr(data-version);
+    }
+
+    :root{
+      --bg:#0b0f14; --card:#121924; --card2:#0f1620; --txt:#e8eef7; --muted:#a9b4c3;
+      --btn:#223049; --btn2:#2b3a57; --danger:#7a2230; --ok:#1e5a3a; --line:#1f2a3b;
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#0b1220 0%, #070d1a 45%, #020617 100%);color:var(--txt)}
+    .wrap{margin:24px 0;padding:0 16px}
+    h1{font-size:18px;margin:0 0 12px;color:var(--txt)}
+    .topbar{display:grid;grid-template-columns:1fr;gap:12px;align-items:center;margin-bottom:16px}
+    .pill{background:var(--card);border:1px solid var(--line);padding:10px 12px;border-radius:12px;display:flex;gap:10px;align-items:center}
+    .pill-wide{display:grid;grid-template-rows:auto auto;gap:12px}
+    .topbar-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .switch{display:inline-flex;align-items:center;gap:8px}
+    .switch input{display:none}
+    .slider{position:relative;width:46px;height:24px;background:var(--card2);border:1px solid var(--line);border-radius:999px;transition:background .2s}
+    .slider::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#94a3b8;transition:transform .2s, background .2s}
+    .switch input:checked + .slider{background:#1f2937}
+    .switch input:checked + .slider::after{transform:translateX(22px);background:#22c55e}
+    .switch-label{font-size:12px;color:var(--muted)}
+    .switch-wrap{display:inline-flex;align-items:center;gap:8px}
+    .pill small{color:var(--muted)}
+    button{border:1px solid var(--line);background:var(--btn);color:var(--txt);padding:10px 12px;border-radius:12px;cursor:pointer}
+    button:hover{background:var(--btn2)}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .btn-danger{background:rgba(122,34,48,.55)}
+    .btn-danger:hover{background:rgba(122,34,48,.75)}
+    #btnStartPause,#btnPlayClockStartPause{font-size:14px;line-height:1;letter-spacing:0}
+    .btn-ok{background:rgba(30,90,58,.55)}
+    .btn-ok:hover{background:rgba(30,90,58,.75)}
+    .btn-secondary{background:var(--card2);color:var(--muted);padding:8px 10px;font-size:12px}
+    .btn-secondary:hover{background:#131c27}
+    .grid{display:grid;grid-template-columns:1fr 2fr;gap:12px}
+    .game-combined-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .status-record-score-title{order:1;grid-column:1 / -1}
+    .status-record{order:2}
+    .status-score{order:3}
+    .status-clock{order:4}
+    .status-live{order:5}
+    .grid-span{grid-column:1 / -1}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .card h2{font-size:14px;margin:0 0 10px;color:var(--muted);font-weight:600}
+    .card .title-divider{height:3px;background:var(--line);margin:8px 0 12px}
+    label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+    input, select{
+      width:100%; padding:10px 12px;border-radius:12px;border:1px solid var(--line);
+      background:var(--card2);color:var(--txt);outline:none
+    }
+    /* Make date picker icon white for dark UI */
+    input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1)}
+    .row{display:flex;gap:10px;align-items:center}
+    .row > *{flex:1}
+    .row-tight{display:flex;gap:10px;align-items:center}
+    .row-tight .grow{flex:2}
+    .row-tight .shrink{flex:1}
+    .name-input-wrap{position:relative;width:100%}
+    .name-input-wrap input{padding-right:40px}
+    .name-clear-btn{
+      position:absolute;
+      right:6px;
+      top:50%;
+      transform:translateY(-50%);
+      width:28px;
+      height:28px;
+      padding:0;
+      border-radius:8px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:14px;
+      line-height:1;
+      background:transparent;
+      border:none;
+      box-shadow:none;
+      color:var(--muted);
+    }
+    .name-clear-btn svg{
+      width:16px;
+      height:16px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:1.8;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      pointer-events:none;
+    }
+    .name-clear-btn:hover{
+      background:transparent;
+      color:var(--txt);
+    }
+    .row-tight .logo-browse-btn{
+      flex:0 0 38px;
+      width:38px;
+      height:38px;
+      padding:0;
+      border-radius:50%;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:16px;
+      line-height:1;
+    }
+    .is-hidden{display:none !important}
+    .time-select{width:72px}
+    .num{font-variant-numeric:tabular-nums;text-align:center}
+    .score-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
+    .score-row .num{min-width:64px}
+    .score-row button{min-width:72px}
+    .record-row{display:grid;grid-template-columns:1fr;gap:8px;align-items:start}
+    .record-field{display:grid;grid-template-rows:auto auto;gap:6px}
+    .record-label{font-size:12px;color:var(--muted);text-align:center}
+    .record-controls{display:grid;grid-template-columns:36px 1fr 36px;align-items:center}
+    .record-controls .num{min-width:0;border-radius:0}
+    .record-controls button{min-width:0;padding:8px 0;border-radius:6px}
+    .record-controls button:first-child{border-top-right-radius:0;border-bottom-right-radius:0}
+    .record-controls button:last-child{border-top-left-radius:0;border-bottom-left-radius:0}
+    .score-controls{display:grid;grid-template-columns:1fr;align-items:center}
+    .score-controls .num{min-width:0;border-radius:0}
+    .btn-mini{font-size:16px;line-height:1}
+    .reset-icon-btn{
+      width:42px;
+      height:42px;
+      padding:0;
+      border-radius:50%;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .reset-icon-btn svg{
+      width:18px;
+      height:18px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      pointer-events:none;
+    }
+    .section-banner{margin-top:4px;font-size:14px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;text-align:center}
+    .center-label{text-align:center}
+    input[type="color"]{height:42px;padding:4px 6px;border-radius:12px;border:1px solid var(--line);background:var(--card2)}
+    .clock-combo-grid{display:grid;grid-template-columns:auto 1fr auto;border:2px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px;}
+    .clock-combo-grid>.rmg-cell:nth-last-child(-n+3){border-bottom:none;}
+    .clock-toggle-cell{justify-content:center;padding:4px 8px;}
+    .clock-combo-grid .rmg-team{justify-content:center;text-align:center;}
+    .clock-input-cell{justify-content:flex-start;padding:8px 10px;}
+    .clock-modern-grid .clock-input-wrap{width:100%;}
+    .clock-input-wrap{position:relative;}
+    .clock-input-wrap input{padding-right:48px;padding-left:10px;height:48px;font-size:18px;width:100%;box-sizing:border-box;}
+    .clock-play-btn{position:absolute;right:46px;top:50%;transform:translateY(-50%);width:36px;height:36px;padding:0;border:none;border-radius:8px;background:transparent;box-shadow:none;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;}
+    .clock-play-btn:hover{background:transparent;color:var(--txt);}
+    .clock-inline-reset{
+      position:absolute;
+      right:6px;
+      top:50%;
+      transform:translateY(-50%);
+      width:36px;
+      height:36px;
+      padding:0;
+      border:none;
+      border-radius:8px;
+      background:transparent;
+      box-shadow:none;
+      color:var(--muted);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .clock-inline-reset:hover{background:transparent;color:var(--txt);}
+    .clock-inline-reset svg{
+      width:18px;
+      height:18px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      pointer-events:none;
+    }
+    .hint{
+      color:#ffffff;
+      font-size:12px;
+      font-weight:700;
+      line-height:1.5;
+      margin-top:10px;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:rgba(55,65,81,.92);
+      transition:background .2s ease, border-color .2s ease;
+    }
+    .hint:hover{
+      background:rgba(55,65,81,.6);
+      border-color:#334155;
+    }
+    .status{margin-left:auto;font-size:12px;color:var(--muted)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr} .game-combined-grid{grid-template-columns:1fr} }
+    @media (max-width:860px){ .grid{grid-template-columns:1fr} .topbar{grid-template-columns:1fr} .pill-wide{grid-template-rows:auto auto} .status{width:100%;margin-left:0} }
+  
+    /* Score preset buttons ??equal segmented style */
+    .preset-wrap{
+      display:grid;
+      grid-auto-flow:column;
+      grid-auto-columns:1fr;
+      width:100%;
+      gap:0;
+    }
+
+    .preset-wrap button{
+      padding:10px 0;
+      font-size:14px;
+      font-weight:600;
+
+      background:#ffffff;
+      color:#0b1220;
+
+      border:1px solid rgba(15, 23, 42, 0.18);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+
+      border-radius:0;
+      cursor:pointer;
+    }
+
+    .preset-wrap button:first-child{
+      border-top-left-radius:8px;
+      border-bottom-left-radius:8px;
+    }
+
+    .preset-wrap button:last-child{
+      border-top-right-radius:8px;
+      border-bottom-right-radius:8px;
+    }
+
+    .preset-wrap button:not(:first-child){
+      border-left:none;
+    }
+
+    .preset-wrap button:hover{
+      background:#f1f5f9;
+    }
+
+    .preset-wrap button:active{
+      transform: translateY(1px);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.18);
+    }
+
+    .preset-wrap button:disabled{
+      opacity:0.55;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+
+    /* Logo scale slider */
+    .scale-row { display:flex; gap:8px; align-items:center; margin-top:4px; }
+    .scale-slider { flex:1; cursor:pointer; accent-color:#22c55e; height:20px; }
+    .scale-val { font-size:12px; color:var(--muted); min-width:38px; text-align:right; font-family:ui-monospace,SFMono-Regular,monospace; white-space:nowrap; }
+
+    /* Shared pill grid (logos, record, score) */
+    .logo-pill-grid, .game-pill-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+    .logo-pill, .game-pill { border:2px solid var(--line); border-radius:12px; background:var(--card2); overflow:hidden; }
+    .logo-modern-pill { display:grid; grid-template-columns:1fr; }
+    .logo-pill-head {
+      background:var(--btn);
+      color:var(--muted);
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      padding:8px 12px;
+      border-bottom:1px solid var(--line);
+    }
+    .logo-pill-cell {
+      padding:8px 10px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+    }
+    .logo-modern-pill > :last-child { border-bottom:none; }
+    .logo-pill-scale { flex-direction:column; align-items:stretch; gap:6px; }
+    .logo-one-grid { display:grid; grid-template-columns:120px 1fr; border:2px solid var(--line); border-radius:12px; overflow:hidden; margin-top:8px; }
+    .logo-one-grid > :last-child { border-bottom:none; }
+    .logo-label-cell { justify-content:flex-start; font-size:12px; font-weight:600; padding-left:12px; }
+    .logo-path-cell { padding:6px 8px; }
+    .logo-path-cell .row-tight { width:100%; }
+    .logo-scale-full { grid-column:1 / -1; padding:8px 12px; justify-content:flex-start; gap:10px; }
+    .logo-scale-full .scale-slider { flex:1; }
+    .game-pill label { margin-top:0; margin-bottom:6px; }
+    .game-pill button.pill-reset { margin-top:8px; width:100%; }
+
+    /* Section head banner */
+    .section-head-banner { background:linear-gradient(90deg,var(--btn2),var(--btn)); border-radius:10px; padding:8px 14px; font-size:13px; font-weight:700; color:var(--txt); text-transform:uppercase; letter-spacing:.1em; margin-top:10px; text-align:center; }
+
+    /* Modern record grid */
+    .record-modern-grid { display:grid; grid-template-columns:7fr 3fr; border:2px solid var(--line); border-radius:12px; overflow:hidden; margin-top:8px; }
+    .rmg-header { background:var(--btn); color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; padding:8px 10px; text-align:center; border-bottom:1px solid var(--line); }
+    .rmg-cell { padding:8px 8px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:center; }
+    .rmg-cell.rmg-team { justify-content:flex-start; font-size:12px; font-weight:600; color:var(--txt); padding-left:12px; }
+    .record-modern-grid > :last-child { border-bottom:none; }
+    .rmg-footer-cell { grid-column:1/-1; justify-content:flex-start; gap:10px; padding:8px 12px; }
+    .record-modern-grid .num{width:96px;min-width:96px;max-width:96px}
+    .record-modern-grid input.num{border:3px solid var(--line)}
+    .record-modern-grid input.num{border-radius:8px}
+    .record-modern-grid .rmg-team{justify-content:flex-start;text-align:left;padding-left:12px}
+    .record-wl-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;justify-items:center}
+    .record-input-wrap{position:relative;width:96px}
+    .record-input-wrap .num{padding-right:34px}
+    .record-inline-reset{
+      position:absolute;
+      right:6px;
+      top:50%;
+      transform:translateY(-50%);
+      width:24px;
+      height:24px;
+      padding:0;
+      border:none;
+      border-radius:6px;
+      background:transparent;
+      box-shadow:none;
+      color:var(--muted);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .record-inline-reset:hover{background:transparent;color:var(--txt)}
+    .record-inline-reset svg{
+      width:14px;
+      height:14px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      pointer-events:none;
+    }
+
+    /* Score modern grid (3-col: Team | Score+Presets | Reset) */
+    .score-modern-grid { display:grid; grid-template-columns:7fr 3fr; border:2px solid var(--line); border-radius:12px; overflow:hidden; margin-top:8px; }
+    .score-modern-grid > :last-child { border-bottom:none; }
+    .rmg-score-cell { justify-content:flex-start; align-items:flex-start; flex-direction:column; padding:8px 10px; }
+    .score-cell-inner { display:flex; flex-direction:column; width:100%; gap:8px; }
+    .score-modern-grid .score-controls{grid-template-columns:120px;gap:0;justify-content:center;align-items:center}
+    .score-modern-grid .score-controls .num{
+      width:120px;
+      min-width:120px;
+      max-width:120px;
+      height:36px;
+      border:3px solid var(--line);
+      border-radius:8px;
+      padding:0;
+      line-height:36px;
+      text-align:center;
+    }
+    .score-team-cell{justify-content:flex-start;text-align:left;padding-left:12px}
+    .score-team-cell span{display:block;width:100%;white-space:normal;overflow:visible;text-overflow:clip}
+    .score-input-wrap{position:relative;width:120px}
+    .score-input-wrap .num{padding-right:34px}
+    .score-inline-reset{
+      position:absolute;
+      right:6px;
+      top:50%;
+      transform:translateY(-50%);
+      width:24px;
+      height:24px;
+      padding:0;
+      border:none;
+      border-radius:6px;
+      background:transparent;
+      box-shadow:none;
+      color:var(--muted);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .score-inline-reset:hover{background:transparent;color:var(--txt)}
+    .score-inline-reset svg{
+      width:14px;
+      height:14px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      pointer-events:none;
+    }
+    .score-presets-cell{grid-column:1 / -1;padding:8px 10px}
+
+    /* Team info modern grid */
+    .info-modern-grid { display:grid; grid-template-columns:72px 1fr 66px; border:2px solid var(--line); border-radius:12px; overflow:hidden; margin-top:8px; }
+    .info-modern-grid > :last-child { border-bottom:none; }
+    .rmg-name-cell { padding:5px 8px; }
+    .rmg-name-cell input { padding:7px 8px; }
+    .rmg-color-cell { padding:4px 6px; display:flex; align-items:center; justify-content:center; }
+    .rmg-color-cell input[type="color"] { width:34px; height:34px; padding:2px; border-radius:50%; border:2px solid var(--line); background:var(--card2); cursor:pointer; overflow:hidden; }
+    .rmg-color-cell input[type="color"]::-webkit-color-swatch-wrapper { padding:0; border-radius:50%; }
+    .rmg-color-cell input[type="color"]::-webkit-color-swatch { border:none; border-radius:50%; }
+    .rmg-font-cell { flex-direction:column; align-items:flex-start; gap:2px; padding:5px 8px; }
+    .rmg-font-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+    .rmg-font-cell input { padding:5px 6px; text-align:center; }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="pill pill-wide">
+        <div class="topbar-row">
+          <button id="btnPickFolder">Select Project Folder</button>
+          <button id="btnPick" class="btn-secondary is-hidden">Advanced: Choose config.json</button>
+          <div class="row-tight" style="gap:12px;flex-wrap:wrap">
+            <div><small>Current folder:</small> <span id="folderName" class="mono">Not selected</span></div>
+            <div><small>Config:</small> <span id="fileName" class="mono">config.json</span></div>
+            <div><small>Write status:</small> <span id="writeState">-</span></div>
+            <div><small>Clock:</small> <span id="clockState">STOP</span></div>
+            <div><small>Version:</small> <span id="versionLabel" class="mono"></span></div>
+          </div>
+          <div class="row-tight" style="margin-left:auto;gap:8px;flex-shrink:0;">
+            <div class="switch-wrap">
+              <label class="switch">
+                <input id="autoWriteToggle" type="checkbox" checked />
+                <span class="slider"></span>
+              </label>
+              <span class="switch-label">Auto write</span>
+            </div>
+            <button id="btnWrite" class="btn-ok" disabled>Write now</button>
+            <button id="btnResetAll" class="btn-danger" disabled>Reset All</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>VSS Team Info</h2>
+        <div class="title-divider"></div>
+
+        <div class="info-modern-grid">
+          <div class="rmg-header">Team</div>
+          <div class="rmg-header">Name</div>
+          <div class="rmg-header" style="padding-right:14px">Color</div>
+
+          <div class="rmg-cell rmg-team">Home</div>
+          <div class="rmg-cell rmg-name-cell">
+            <div class="name-input-wrap">
+              <input id="teamAName" placeholder="e.g. SCPS" />
+              <button id="clearTeamAName" class="name-clear-btn" type="button" aria-label="Clear Home Name" title="Clear Home Name">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 6h18"></path>
+                  <path d="M8 6V4h8v2"></path>
+                  <path d="M6 6l1 14h10l1-14"></path>
+                  <path d="M10 10v7"></path>
+                  <path d="M14 10v7"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="rmg-cell rmg-color-cell">
+            <input id="teamAColor" type="color" value="#1e40af" />
+          </div>
+
+          <div class="rmg-cell rmg-team">Visitor</div>
+          <div class="rmg-cell rmg-name-cell">
+            <div class="name-input-wrap">
+              <input id="teamBName" placeholder="e.g. SCOTTSDALE USD" />
+              <button id="clearTeamBName" class="name-clear-btn" type="button" aria-label="Clear Visitor Name" title="Clear Visitor Name">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 6h18"></path>
+                  <path d="M8 6V4h8v2"></path>
+                  <path d="M6 6l1 14h10l1-14"></path>
+                  <path d="M10 10v7"></path>
+                  <path d="M14 10v7"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="rmg-cell rmg-color-cell">
+            <input id="teamBColor" type="color" value="#dc2626" />
+          </div>
+
+          <div class="rmg-cell rmg-footer-cell">
+            <span class="rmg-font-label" style="white-space:nowrap;">Name Scale</span>
+            <input type="range" id="teamNameFontSize" min="15" max="40" step="1" value="25" class="scale-slider" disabled style="flex:1;margin-left:10px;" />
+            <span id="teamNameFontSizeVal" class="scale-val">25px</span>
+          </div>
+        </div>
+        <div class="logo-one-grid">
+          <div class="rmg-header">Logo</div>
+          <div class="rmg-header">File</div>
+
+          <div class="rmg-cell logo-label-cell">Home</div>
+          <div class="rmg-cell logo-path-cell">
+            <div class="row-tight">
+              <input id="teamALogo" class="grow" placeholder="e.g. Photo/teamA.png" />
+              <button id="pickTeamALogo" class="logo-browse-btn" aria-label="Browse Home Logo" title="Browse Home Logo" disabled>&#128269;</button>
+            </div>
+          </div>
+          <div class="rmg-cell logo-scale-full">
+            <span class="rmg-font-label" style="white-space:nowrap;">Logo Scale</span>
+            <input type="range" id="teamALogoScale" min="5" max="60" step="1" value="10" class="scale-slider" disabled />
+            <span id="teamALogoScaleVal" class="scale-val">10px</span>
+          </div>
+
+          <div class="rmg-cell logo-label-cell">Visitor</div>
+          <div class="rmg-cell logo-path-cell">
+            <div class="row-tight">
+              <input id="teamBLogo" class="grow" placeholder="e.g. Photo/teamB.png" />
+              <button id="pickTeamBLogo" class="logo-browse-btn" aria-label="Browse Visitor Logo" title="Browse Visitor Logo" disabled>&#128269;</button>
+            </div>
+          </div>
+          <div class="rmg-cell logo-scale-full">
+            <span class="rmg-font-label" style="white-space:nowrap;">Logo Scale</span>
+            <input type="range" id="teamBLogoScale" min="5" max="60" step="1" value="10" class="scale-slider" disabled />
+            <span id="teamBLogoScaleVal" class="scale-val">10px</span>
+          </div>
+
+          <div class="rmg-cell logo-label-cell">Sponsor (VSS)</div>
+          <div class="rmg-cell logo-path-cell">
+            <div class="row-tight">
+              <input id="sponsorLogo" class="grow" placeholder="e.g. Photo/sponsor.png" />
+              <button id="pickSponsorLogo" class="logo-browse-btn" aria-label="Browse Sponsor Logo" title="Browse Sponsor Logo" disabled>&#128269;</button>
+            </div>
+          </div>
+          <div class="rmg-cell logo-scale-full">
+            <span class="rmg-font-label" style="white-space:nowrap;">Logo Scale</span>
+            <input type="range" id="sponsorLogoScale" min="5" max="60" step="1" value="10" class="scale-slider" disabled />
+            <span id="sponsorLogoScaleVal" class="scale-val">10px</span>
+          </div>
+
+          <div class="rmg-cell logo-label-cell">League</div>
+          <div class="rmg-cell logo-path-cell">
+            <div class="row-tight">
+              <input id="leagueLogo" class="grow" placeholder="e.g. Photo/league.png" />
+              <button id="pickLeagueLogo" class="logo-browse-btn" aria-label="Browse League Logo" title="Browse League Logo" disabled>&#128269;</button>
+            </div>
+          </div>
+          <div class="rmg-cell logo-scale-full">
+            <span class="rmg-font-label" style="white-space:nowrap;">Logo Scale</span>
+            <input type="range" id="leagueLogoScale" min="5" max="60" step="1" value="10" class="scale-slider" disabled />
+            <span id="leagueLogoScaleVal" class="scale-val">10px</span>
+          </div>
+        </div>
+
+        <div class="hint">
+          &#9733; Place logo image files inside the Photo folder <br/><span class="mono">(Photo must be in the same directory as Scoreboard.html)</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>VSS Game Status</h2>
+        <div class="title-divider"></div>
+        <div class="game-combined-grid">
+
+          <div class="status-record-score-title">
+            <div class="section-head-banner">Team Record &amp; Score</div>
+          </div>
+
+          <div class="status-clock">
+            <div class="section-head-banner">Clock Controls</div>
+        <div class="clock-combo-grid" id="clockRow">
+
+          <div class="rmg-header">Clock</div>
+          <div class="rmg-header">Time</div>
+          <div class="rmg-header">Hide/Show</div>
+
+          <div class="rmg-cell rmg-team">Game Clock</div>
+          <div class="rmg-cell clock-input-cell">
+            <div class="clock-input-wrap">
+              <input id="time" value="10:00" class="mono" />
+              <button id="btnStartPause" class="clock-play-btn" type="button" aria-label="Start/Pause Game Clock" disabled>▶</button>
+              <button id="btnResetTime" class="clock-inline-reset" type="button" aria-label="Reset Time" title="Reset Time" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                  <path d="M3 4v5h5"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="rmg-cell clock-toggle-cell">
+            <label class="switch">
+              <input id="showGameClock" type="checkbox" checked disabled />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="rmg-cell rmg-team">Shot Clock</div>
+          <div class="rmg-cell clock-input-cell">
+            <div class="clock-input-wrap">
+              <input id="playClockInput" value="40" class="mono" inputmode="numeric" disabled />
+              <button id="btnPlayClockStartPause" class="clock-play-btn" type="button" aria-label="Start/Pause Shot Clock" disabled>▶</button>
+              <button id="btnPlayClockReset" class="clock-inline-reset" type="button" aria-label="Reset Shot Clock" title="Reset Shot Clock" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                  <path d="M3 4v5h5"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="rmg-cell clock-toggle-cell">
+            <label class="switch">
+              <input id="showShotClock" type="checkbox" checked disabled />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+        </div>
+
+        <div class="hint">★ Once entering the clock time, press Start button to define the Reset time.</div>
+          </div>
+
+          <div class="status-record">
+        <div class="record-modern-grid" id="recordRow">
+
+          <div class="rmg-header">Team</div>
+          <div class="rmg-header">Wins / Losses</div>
+
+          <!-- Team A -->
+          <div class="rmg-cell rmg-team"><span id="recordLabelA">Record A</span></div>
+          <div class="rmg-cell">
+            <div class="record-wl-wrap">
+              <div class="record-input-wrap">
+                <input id="teamAWins" class="num" value="0" inputmode="numeric" />
+                <button id="btnResetTeamAWins" class="record-inline-reset" type="button" aria-label="Reset Win A" title="Reset Win A" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                    <path d="M3 4v5h5"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="record-input-wrap">
+                <input id="teamALosses" class="num" value="0" inputmode="numeric" />
+                <button id="btnResetTeamARecord" class="record-inline-reset" type="button" aria-label="Reset Lose A" title="Reset Lose A" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                    <path d="M3 4v5h5"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Team B -->
+          <div class="rmg-cell rmg-team"><span id="recordLabelB">Record B</span></div>
+          <div class="rmg-cell">
+            <div class="record-wl-wrap">
+              <div class="record-input-wrap">
+                <input id="teamBWins" class="num" value="0" inputmode="numeric" />
+                <button id="btnResetTeamBWins" class="record-inline-reset" type="button" aria-label="Reset Win B" title="Reset Win B" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                    <path d="M3 4v5h5"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="record-input-wrap">
+                <input id="teamBLosses" class="num" value="0" inputmode="numeric" />
+                <button id="btnResetTeamBRecord" class="record-inline-reset" type="button" aria-label="Reset Lose B" title="Reset Lose B" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                    <path d="M3 4v5h5"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="rmg-cell rmg-footer-cell">
+            <span class="rmg-font-label" style="white-space:nowrap;">Record Scale</span>
+            <input type="range" id="teamRecordFontSize" min="15" max="40" step="1" value="25" class="scale-slider" disabled style="flex:1;margin-left:10px;" />
+            <span id="teamRecordFontSizeVal" class="scale-val">25px</span>
+          </div>
+
+        </div>
+            <div class="hint">
+              &#9733; Record and Score changes update the scoreboard in real time
+            </div>
+          </div>
+
+          <div class="status-score">
+        <div class="score-modern-grid" id="scoreRow">
+
+          <div class="rmg-header">Team</div>
+          <div class="rmg-header">Score</div>
+
+          <!-- Team A -->
+          <div class="rmg-cell rmg-team"><span id="scoreLabelA">Score A</span></div>
+          <div class="rmg-cell rmg-score-cell">
+            <div class="score-cell-inner">
+              <div class="score-controls">
+                <div class="score-input-wrap">
+                  <input id="scoreA" class="num" value="0" inputmode="numeric" />
+                  <button id="btnResetScoreA" class="score-inline-reset" type="button" aria-label="Reset Score A" title="Reset Score A" disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                      <path d="M3 4v5h5"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rmg-cell score-presets-cell">
+            <div id="scorePresetA" class="preset-wrap"></div>
+            <div id="scorePresetANeg" class="preset-wrap"></div>
+          </div>
+
+          <!-- Team B -->
+          <div class="rmg-cell rmg-team"><span id="scoreLabelB">Score B</span></div>
+          <div class="rmg-cell rmg-score-cell">
+            <div class="score-cell-inner">
+              <div class="score-controls">
+                <div class="score-input-wrap">
+                  <input id="scoreB" class="num" value="0" inputmode="numeric" />
+                  <button id="btnResetScoreB" class="score-inline-reset" type="button" aria-label="Reset Score B" title="Reset Score B" disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+                      <path d="M3 4v5h5"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="rmg-cell score-presets-cell">
+            <div id="scorePresetB" class="preset-wrap"></div>
+            <div id="scorePresetBNeg" class="preset-wrap"></div>
+          </div>
+
+        </div>
+
+          </div>
+
+          <div class="status-live">
+        <div class="section-head-banner">Live Setting</div>
+        <div class="row">
+          <div>
+            <label>Sports Type</label>
+            <select id="sportsType">
+              <option value="FOOTBALL">Football</option>
+              <option value="BASKETBALL">Basketball</option>
+              <option value="LACROSSE">Lacrosse</option>
+              <option value="VOLLEYBALL">Volleyball</option>
+              <option value="HOCKEY">Hockey</option>
+            </select>
+          </div>
+          <div>
+            <label>Game Period</label>
+            <select id="period"></select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Live Game Date (Phoenix time)</label>
+            <div class="row-tight">
+              <input id="liveDate" type="date" class="grow" />
+              <select id="liveHour" class="time-select"></select>
+              <select id="liveMinute" class="time-select"></select>
+              <select id="liveAmPm" class="time-select">
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+          </div>
+        </div>
+            <div class="hint">
+              &#9733; Scoreboard Sports Type supported: <br/><br/> Football / Basketball / Lacrosse / Volleyball / Hockey <br/>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/** ====== Utility ====== */
+const detectVersionFromComment = () => {
+  const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT, null, false);
+  let node;
+  while (node = walker.nextNode()) {
+    const match = node.nodeValue.match(/@Version:\s*([^\s\n]+)/);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  return document.getElementById('versionMeta')?.content || "3.0"; 
+};
+const GLOBAL_VERSION = detectVersionFromComment();
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.body.setAttribute('data-version', GLOBAL_VERSION);
+  const meta = document.getElementById('versionMeta');
+  if (meta) meta.content = GLOBAL_VERSION;
+});
+
+const $ = (id) => document.getElementById(id);
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const pad2 = (n) => (n < 10 ? "0" + n : "" + n);
+function parseMMSS(s){
+  const m = /^(\d+):([0-5]\d)$/.exec((s||"").trim());
+  if(!m) return null;
+  return clamp(parseInt(m[1],10)*60 + parseInt(m[2],10), 0, 99*60+59);
+}
+function fmtMMSS(total){
+  total = clamp(Math.floor(total||0), 0, 99*60+59);
+  const m = Math.floor(total/60), ss = total%60;
+  return `${pad2(m)}:${pad2(ss)}`;
+}
+function basename(path){
+  if(!path) return "";
+  const parts = path.split(/[/\\]/);
+  return parts[parts.length-1] || path;
+}
+function nowMs(){ return Date.now(); }
+function isValidColor(color){
+  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
+}
+function normalizeColor(color, fallback){
+  if(!isValidColor(color)) return fallback;
+  if(color.length === 4){
+    return "#" + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+  }
+  return color;
+}
+function to24Hour(hour12, ampm){
+  let h = clamp(parseInt(hour12 || "12", 10) || 12, 1, 12);
+  if(ampm === "PM" && h < 12) h += 12;
+  if(ampm === "AM" && h === 12) h = 0;
+  return h;
+}
+function from24Hour(h24){
+  const h = clamp(parseInt(h24 || "0", 10) || 0, 0, 23);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return { hour12, ampm };
+}
+function buildLiveDateString(){
+  const date = $("liveDate").value;
+  if(!date) return "";
+  const hour = $("liveHour").value || "12";
+  const minute = $("liveMinute").value || "00";
+  const ampm = $("liveAmPm").value || "AM";
+  const h24 = to24Hour(hour, ampm);
+  return `${date}T${pad2(h24)}:${pad2(parseInt(minute,10)||0)}`;
+}
+function parseLiveDate(value){
+  const m = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec((value||"").trim());
+  if(!m) return { date:"", hour:"12", minute:"00", ampm:"AM" };
+  const date = m[1];
+  const h24 = parseInt(m[2] || "0", 10);
+  const minute = parseInt(m[3] || "0", 10);
+  const t = from24Hour(h24);
+  return { date, hour: String(t.hour12), minute: pad2(minute), ampm: t.ampm };
+}
+function fillTimeSelects(){
+  const hourSel = $("liveHour");
+  const minSel = $("liveMinute");
+  if(!hourSel || !minSel) return;
+  if(hourSel.options.length === 0){
+    for(let h=1; h<=12; h++){
+      const opt = document.createElement("option");
+      opt.value = String(h);
+      opt.textContent = String(h);
+      hourSel.appendChild(opt);
+    }
+  }
+  if(minSel.options.length === 0){
+    for(let m=0; m<=59; m++){
+      const opt = document.createElement("option");
+      opt.value = pad2(m);
+      opt.textContent = pad2(m);
+      minSel.appendChild(opt);
+    }
+  }
+}
+function parseRecord(value){
+  const m = /^(\d+)\s*(?:\||-|\/)\s*(\d+)$/.exec((value||"").trim());
+  if(!m) return { wins: 0, losses: 0 };
+  return {
+    wins: clamp(parseInt(m[1],10) || 0, 0, 999),
+    losses: clamp(parseInt(m[2],10) || 0, 0, 999)
+  };
+}
+function syncGameInfoTitles(){
+  const aName = $("teamAName").value.trim();
+  const bName = $("teamBName").value.trim();
+  $("recordLabelA").textContent = aName || "Record A";
+  $("recordLabelB").textContent = bName || "Record B";
+  $("scoreLabelA").textContent = aName || "Score A";
+  $("scoreLabelB").textContent = bName || "Score B";
+}
+
+const PERIOD_OPTIONS = {
+  "FOOTBALL": ["Q1","Q2","Q3","Q4"],
+  "BASKETBALL": ["Q1","Q2","Q3","Q4"],
+  "LACROSSE": ["Q1","Q2","Q3","Q4"],
+  "VOLLEYBALL": ["Set 1","Set 2","Set 3","Set 4","Set 5"],
+  "HOCKEY": ["P1","P2","P3"]
+};
+
+/** ====== Score presets by sport ====== */
+const SCORE_PRESETS = {
+  FOOTBALL: [
+    { label: "+6", delta: 6, tag: "TD" },
+    { label: "+3", delta: 3, tag: "FG" },
+    { label: "+1", delta: 1, tag: "XP" },
+  ],
+  BASKETBALL: [
+    { label: "+3", delta: 3, tag: "3PT" },
+    { label: "+2", delta: 2, tag: "2PT" },
+    { label: "+1", delta: 1, tag: "FT" },
+  ],
+  LACROSSE: [
+    { label: "+1", delta: 1, tag: "GOAL" },
+  ],
+  VOLLEYBALL: [
+    { label: "+1", delta: 1, tag: "PT" },
+  ],
+  HOCKEY: [
+    { label: "+1", delta: 1, tag: "GOAL" },
+  ],
+};
+
+function applyScoreDelta(team, delta, reasonTag=""){
+  const inputId = team === "A" ? "scoreA" : "scoreB";
+  const next = clamp((parseInt($(inputId).value||"0",10)||0) + delta, 0, 999);
+  $(inputId).value = String(next);
+  maybeAutoWrite(`${team}+${delta}${reasonTag ? "-" + reasonTag : ""}`);
+}
+
+function renderScorePresets(){
+  const sport = ($("sportsType").value || "FOOTBALL").toUpperCase();
+  const presets = SCORE_PRESETS[sport] || [{ label:"+1", delta:1, tag:"" }];
+  const singleRowSix = (sport === "FOOTBALL" || sport === "BASKETBALL");
+
+  const wrapA = $("scorePresetA");
+  const wrapB = $("scorePresetB");
+  const wrapANeg = $("scorePresetANeg");
+  const wrapBNeg = $("scorePresetBNeg");
+
+  if(!wrapA || !wrapB || !wrapANeg || !wrapBNeg) return;
+
+  wrapA.innerHTML = "";
+  wrapB.innerHTML = "";
+  wrapANeg.innerHTML = "";
+  wrapBNeg.innerHTML = "";
+
+  presets.forEach(p => {
+
+    // ===== Positive score button =====
+    const btnA = document.createElement("button");
+    btnA.type = "button";
+    btnA.textContent = p.label;
+    btnA.disabled = $("scoreA")?.disabled ?? true;
+    btnA.addEventListener("click", () =>
+      applyScoreDelta("A", p.delta, p.tag)
+    );
+    wrapA.appendChild(btnA);
+
+    const btnB = document.createElement("button");
+    btnB.type = "button";
+    btnB.textContent = p.label;
+    btnB.disabled = $("scoreB")?.disabled ?? true;
+    btnB.addEventListener("click", () =>
+      applyScoreDelta("B", p.delta, p.tag)
+    );
+    wrapB.appendChild(btnB);
+
+    // ===== Negative score button =====
+    const btnANeg = document.createElement("button");
+    btnANeg.type = "button";
+    btnANeg.textContent = "-" + p.label.replace("+","");
+    btnANeg.disabled = $("scoreA")?.disabled ?? true;
+    btnANeg.addEventListener("click", () =>
+      applyScoreDelta("A", -p.delta, p.tag)
+    );
+    if(singleRowSix){
+      wrapA.appendChild(btnANeg);
+    }else{
+      wrapANeg.appendChild(btnANeg);
+    }
+
+    const btnBNeg = document.createElement("button");
+    btnBNeg.type = "button";
+    btnBNeg.textContent = "-" + p.label.replace("+","");
+    btnBNeg.disabled = $("scoreB")?.disabled ?? true;
+    btnBNeg.addEventListener("click", () =>
+      applyScoreDelta("B", -p.delta, p.tag)
+    );
+    if(singleRowSix){
+      wrapB.appendChild(btnBNeg);
+    }else{
+      wrapBNeg.appendChild(btnBNeg);
+    }
+
+  });
+
+  // For single-preset sports (Lacrosse, Volleyball, Hockey),
+  // put +1 and -1 on the same row instead of two separate rows.
+  if (!singleRowSix && presets.length === 1) {
+    [...wrapANeg.children].forEach(btn => wrapA.appendChild(btn));
+    [...wrapBNeg.children].forEach(btn => wrapB.appendChild(btn));
+    wrapANeg.style.display = "none";
+    wrapBNeg.style.display = "none";
+  } else if (singleRowSix) {
+    wrapANeg.style.display = "none";
+    wrapBNeg.style.display = "none";
+  } else {
+    wrapANeg.style.display = "";
+    wrapBNeg.style.display = "";
+  }
+
+  wrapA.style.gridTemplateColumns = `repeat(${Math.max(1, wrapA.children.length)}, minmax(0,1fr))`;
+  wrapB.style.gridTemplateColumns = `repeat(${Math.max(1, wrapB.children.length)}, minmax(0,1fr))`;
+  wrapANeg.style.gridTemplateColumns = `repeat(${Math.max(1, wrapANeg.children.length)}, minmax(0,1fr))`;
+  wrapBNeg.style.gridTemplateColumns = `repeat(${Math.max(1, wrapBNeg.children.length)}, minmax(0,1fr))`;
+}
+
+
+function fillPeriodOptions(){
+  const sport = $("sportsType").value || "FOOTBALL";
+  const periodSel = $("period");
+  const current = periodSel.value;
+  const list = PERIOD_OPTIONS[sport] || ["Period"];
+  periodSel.innerHTML = "";
+  list.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    periodSel.appendChild(opt);
+  });
+  if(current && list.includes(current)){
+    periodSel.value = current;
+  }
+}
+function setSectionVisible(id, visible){
+  const el = $(id);
+  if(!el) return;
+  el.classList.toggle("is-hidden", !visible);
+  el.querySelectorAll("input, select, button").forEach(ctrl => {
+    ctrl.disabled = !visible;
+  });
+}
+function applySportMode(){
+  // Baseball support removed: keep normal controls visible
+  setSectionVisible("clockRow", true);
+
+  fillPeriodOptions();
+  renderScorePresets();
+}
+
+/** ====== State ====== */
+let fileHandle = null;
+let projectDirHandle = null;
+let clockTimer = null;
+let clockSeconds = 10*60;
+let resetBaseSeconds = 10*60;
+let clockRunning = false;
+
+// Play clock
+let playClockTimer = null;
+let playClockSeconds = 40;
+let playClockResetSeconds = 40;
+let playClockRunning = false;
+
+let state = {
+  version: GLOBAL_VERSION,
+  teamAName: "",
+  teamBName: "",
+  teamARecord: "",
+  teamBRecord: "",
+  teamALogo: "",
+  teamBLogo: "",
+  sponsorLogo: "",
+  leagueLogo: "",
+  teamAColor: "#1e40af",
+  teamBColor: "#dc2626",
+  scoreA: 0,
+  scoreB: 0,
+  sportsType: "FOOTBALL",
+  liveDate: "",
+  period: "",
+  time: "10:00",
+  clockRunning: false,
+  teamNameFontSize: 25,
+  teamRecordFontSize: 25,
+  teamALogoScale: 10,
+  teamBLogoScale: 10,
+  sponsorLogoScale: 10,
+  leagueLogoScale: 10,
+  playClockSeconds: 40,
+  playClockRunning: false,
+  showGameClock: true,
+  showShotClock: true,
+};
+
+function setEnabled(enabled){
+  [
+    "btnWrite","btnResetAll","pickTeamALogo","pickTeamBLogo","pickSponsorLogo",
+    "pickLeagueLogo",
+    "btnStartPause","btnResetTime","btnResetScoreA","btnResetScoreB",
+    "teamAWins","teamALosses","teamBWins","teamBLosses",
+    "btnResetTeamAWins","btnResetTeamBWins",
+    "btnResetTeamARecord","btnResetTeamBRecord","autoWriteToggle",
+    "teamALogoScale","teamBLogoScale","sponsorLogoScale","leagueLogoScale",
+    "teamNameFontSize","teamRecordFontSize",
+    "btnPlayClockStartPause","btnPlayClockReset","playClockInput",
+    "showGameClock","showShotClock"
+  ].forEach(id => $(id).disabled = !enabled);
+}
+
+function uiToState(){
+  state.teamAName = $("teamAName").value.trim();
+  state.teamBName = $("teamBName").value.trim();
+  const aWins = clamp(parseInt($("teamAWins").value || "0", 10) || 0, 0, 999);
+  const aLosses = clamp(parseInt($("teamALosses").value || "0", 10) || 0, 0, 999);
+  const bWins = clamp(parseInt($("teamBWins").value || "0", 10) || 0, 0, 999);
+  const bLosses = clamp(parseInt($("teamBLosses").value || "0", 10) || 0, 0, 999);
+  state.teamARecord = `${aWins}-${aLosses}`;
+  state.teamBRecord = `${bWins}-${bLosses}`;
+  state.teamALogo = $("teamALogo").value.trim();
+  state.teamBLogo = $("teamBLogo").value.trim();
+  state.sponsorLogo = $("sponsorLogo").value.trim();
+  state.leagueLogo = $("leagueLogo").value.trim();
+  state.sportsType = $("sportsType").value;
+  state.liveDate = buildLiveDateString();
+  state.teamAColor = $("teamAColor").value.trim();
+  state.teamBColor = $("teamBColor").value.trim();
+  state.period = $("period").value.trim();
+  state.scoreA = clamp(parseInt($("scoreA").value || "0", 10) || 0, 0, 999);
+  state.scoreB = clamp(parseInt($("scoreB").value || "0", 10) || 0, 0, 999);
+  state.teamNameFontSize = clamp(parseFloat($("teamNameFontSize").value) || 25, 15, 40);
+  state.teamRecordFontSize = clamp(parseFloat($("teamRecordFontSize").value) || 25, 15, 40);
+  state.teamALogoScale = clamp(parseFloat($("teamALogoScale").value) || 10, 5, 60);
+  state.teamBLogoScale = clamp(parseFloat($("teamBLogoScale").value) || 10, 5, 60);
+  state.sponsorLogoScale = clamp(parseFloat($("sponsorLogoScale").value) || 10, 5, 60);
+  state.leagueLogoScale = clamp(parseFloat($("leagueLogoScale").value) || 10, 5, 60);
+
+  if(!clockRunning){
+    const sec = parseMMSS($("time").value);
+    if(sec != null) clockSeconds = sec;
+  }
+
+  state.time = fmtMMSS(clockSeconds);
+  state.clockRunning = clockRunning;
+
+  if (!playClockRunning) {
+    const sec = clamp(parseInt($("playClockInput").value, 10) || 40, 0, 99);
+    playClockSeconds = sec;
+  }
+  state.playClockSeconds = playClockSeconds;
+  state.playClockRunning = playClockRunning;
+  state.showGameClock = $("showGameClock").checked;
+  state.showShotClock = $("showShotClock").checked;
+}
+
+function stateToUi(){
+  $("teamAName").value = state.teamAName || "";
+  $("teamBName").value = state.teamBName || "";
+  syncGameInfoTitles();
+  const aRecord = parseRecord(state.teamARecord || "0-0");
+  const bRecord = parseRecord(state.teamBRecord || "0-0");
+  $("teamAWins").value = String(aRecord.wins);
+  $("teamALosses").value = String(aRecord.losses);
+  $("teamBWins").value = String(bRecord.wins);
+  $("teamBLosses").value = String(bRecord.losses);
+  $("teamALogo").value = state.teamALogo || "";
+  $("teamBLogo").value = state.teamBLogo || "";
+  $("sponsorLogo").value = state.sponsorLogo || "";
+  $("leagueLogo").value = state.leagueLogo || "";
+  $("sportsType").value = state.sportsType || "FOOTBALL";
+  applySportMode();
+  const live = parseLiveDate(state.liveDate || "");
+  $("liveDate").value = live.date;
+  $("liveHour").value = live.hour;
+  $("liveMinute").value = live.minute;
+  $("liveAmPm").value = live.ampm;
+  $("teamAColor").value = normalizeColor(state.teamAColor, "#1e40af");
+  $("teamBColor").value = normalizeColor(state.teamBColor, "#dc2626");
+  if (state.period) $("period").value = state.period;
+  $("scoreA").value = String(state.scoreA ?? 0);
+  $("scoreB").value = String(state.scoreB ?? 0);
+  $("time").value = state.time || "10:00";
+  const nameScale = clamp(parseFloat(state.teamNameFontSize) || 25, 15, 40);
+  $("teamNameFontSize").value = String(nameScale);
+  $("teamNameFontSizeVal").textContent = Math.round(nameScale) + "px";
+  const recScale = clamp(parseFloat(state.teamRecordFontSize) || 25, 15, 40);
+  $("teamRecordFontSize").value = String(recScale);
+  $("teamRecordFontSizeVal").textContent = Math.round(recScale) + "px";
+  const LOGO_DEFAULTS = { teamALogoScale:10, teamBLogoScale:10, sponsorLogoScale:10, leagueLogoScale:10 };
+  const LOGO_MIN = { teamALogoScale:5, teamBLogoScale:5, sponsorLogoScale:5, leagueLogoScale:5 };
+  const LOGO_MAX = { teamALogoScale:60, teamBLogoScale:60, sponsorLogoScale:60, leagueLogoScale:60 };
+  ["teamALogoScale","teamBLogoScale","sponsorLogoScale","leagueLogoScale"].forEach(id => {
+    const val = clamp(parseFloat(state[id]) || LOGO_DEFAULTS[id], LOGO_MIN[id], LOGO_MAX[id]);
+    $(id).value = String(val);
+    $(id + "Val").textContent = Math.round(val) + "px";
+  });
+
+  if (!playClockRunning) {
+    const pcSec = clamp(parseInt(state.playClockSeconds) || 40, 0, 99);
+    playClockSeconds = pcSec;
+    playClockResetSeconds = pcSec;
+    $("playClockInput").value = String(pcSec);
+  }
+  $("showGameClock").checked = state.showGameClock !== false;
+  $("showShotClock").checked = state.showShotClock !== false;
+  updateClockBtnIcon();
+  updatePlayClockBtnIcon();
+}
+
+async function writeConfig(reason=""){
+  if(!fileHandle) return;
+  try{
+    uiToState();
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(state, null, 2));
+    await writable.close();
+
+    $("writeState").textContent = reason ? `OK (${reason})` : "OK";
+    $("clockState").textContent = clockRunning ? "RUN" : "STOP";
+  }catch(e){
+    console.error(e);
+    $("writeState").textContent = "FAILED (check permissions)";
+  }
+}
+
+function maybeAutoWrite(reason){
+  if($("autoWriteToggle").checked) writeConfig(reason);
+}
+
+function setProjectFolderUi(){
+  const folderName = projectDirHandle?.name || "Not selected";
+  $("folderName").textContent = folderName;
+  $("fileName").textContent = fileHandle?.name || "config.json";
+  $("btnPickFolder").textContent = projectDirHandle ? "Change Project Folder" : "Select Project Folder";
+}
+
+/** ====== IndexedDB handle storage ====== */
+function openHandleDb(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("vss-fs-handles", 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore("handles");
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGetHandle(key){
+  const db = await openHandleDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("handles", "readonly");
+    const req = tx.objectStore("handles").get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSetHandle(key, value){
+  const db = await openHandleDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("handles", "readwrite");
+    tx.objectStore("handles").put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function verifyPermission(handle, readWrite=false){
+  const opts = { mode: readWrite ? "readwrite" : "read" };
+  if ((await handle.queryPermission(opts)) === "granted") return true;
+  if ((await handle.requestPermission(opts)) === "granted") return true;
+  return false;
+}
+
+async function restoreProjectDir(){
+  try{
+    const stored = await idbGetHandle("projectDir");
+    if(!stored) return;
+    const ok = await verifyPermission(stored, true);
+    if(!ok) return;
+    projectDirHandle = stored;
+    setProjectFolderUi();
+  }catch(e){
+    // ignore restore errors
+  }
+}
+
+async function setProjectDir(handle){
+  projectDirHandle = handle;
+  await idbSetHandle("projectDir", handle);
+  setProjectFolderUi();
+}
+
+async function loadConfigFromDir(){
+  if(!projectDirHandle) return false;
+  const ok = await verifyPermission(projectDirHandle, true);
+  if(!ok) return false;
+  try{
+    fileHandle = await projectDirHandle.getFileHandle("config.json", { create: true });
+    setProjectFolderUi();
+    setEnabled(true);
+
+    
+    renderScorePresets();
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    const obj = text ? JSON.parse(text) : {};
+
+    state = { ...state, ...obj, version: GLOBAL_VERSION };
+    const sec = parseMMSS(state.time || "10:00") ?? 10*60;
+    clockSeconds = sec;
+    clockRunning = !!state.clockRunning;
+
+    state.time = fmtMMSS(clockSeconds);
+    state.clockRunning = clockRunning;
+    stateToUi();
+
+    $("writeState").textContent = "READY";
+    $("clockState").textContent = clockRunning ? "RUN" : "STOP";
+
+    clockRunning = false;
+    $("clockState").textContent = "STOP";
+    await writeConfig("load");
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+/** ====== Advanced fallback file picker (hidden by default) ====== */
+$("btnPick").addEventListener("click", async () => {
+  try{
+    fileHandle = await window.showOpenFilePicker({
+      id: "vss-config",
+      multiple: false,
+      types: [{ description: "JSON", accept: { "application/json": [".json"] } }]
+    }).then(arr => arr[0]);
+
+    // Advanced mode: no folder handle
+    projectDirHandle = null;
+    setProjectFolderUi();
+    setEnabled(true);
+
+    
+    renderScorePresets();
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    const obj = text ? JSON.parse(text) : {};
+
+    state = { ...state, ...obj };
+    const sec = parseMMSS(state.time || "10:00") ?? 10*60;
+    clockSeconds = sec;
+    clockRunning = !!state.clockRunning;
+
+    state.time = fmtMMSS(clockSeconds);
+    state.clockRunning = clockRunning;
+    stateToUi();
+
+    $("writeState").textContent = "READY";
+    $("clockState").textContent = clockRunning ? "RUN" : "STOP";
+
+    clockRunning = false;
+    $("clockState").textContent = "STOP";
+    await writeConfig("load");
+  }catch(e){
+    $("writeState").textContent = "CANCELLED";
+  }
+});
+
+/** ====== Project folder picker ====== */
+$("btnPickFolder").addEventListener("click", async () => {
+  try{
+    const handle = await window.showDirectoryPicker({ id: "vss-project" });
+    const ok = await verifyPermission(handle, true);
+    if(!ok) return;
+    await setProjectDir(handle);
+    await loadConfigFromDir();
+  }catch(e){
+    // ignore cancel
+  }
+});
+
+/** ====== Logo browse ====== */
+async function pickLogo(targetInputId){
+  try{
+    const pickerOpts = {
+      id: "vss-logos",
+      multiple:false,
+      types: [{ description:"Images", accept:{ "image/*":[".png",".jpg",".jpeg",".webp"] } }]
+    };
+    if(projectDirHandle){
+      // Start in the stored project folder when available
+      pickerOpts.startIn = projectDirHandle;
+    }
+    const h = await window.showOpenFilePicker(pickerOpts).then(arr => arr[0]);
+
+    const f = await h.getFile();
+    $(targetInputId).value = "Photo/" + basename(f.name);
+    maybeAutoWrite("logo");
+  }catch(e){
+    // ignore cancel
+  }
+}
+$("pickTeamALogo").addEventListener("click", () => pickLogo("teamALogo"));
+$("pickTeamBLogo").addEventListener("click", () => pickLogo("teamBLogo"));
+$("pickSponsorLogo").addEventListener("click", () => pickLogo("sponsorLogo"));
+$("pickLeagueLogo").addEventListener("click", () => pickLogo("leagueLogo"));
+
+/** ====== Color input ====== */
+$("teamAColor").addEventListener("input", () => {
+  maybeAutoWrite("colorA");
+});
+
+$("teamBColor").addEventListener("input", () => {
+  maybeAutoWrite("colorB");
+});
+
+/** ====== Logo scale + record font scale -> live value display ====== */
+["teamALogoScale","teamBLogoScale","sponsorLogoScale","leagueLogoScale","teamNameFontSize","teamRecordFontSize"].forEach(id => {
+  $(id).addEventListener("input", () => {
+    $(id + "Val").textContent = Math.round(parseFloat($(id).value)) + "px";
+  });
+});
+
+/** ====== Team name -> dynamic labels ====== */
+["teamAName","teamBName"].forEach(id => {
+  $(id).addEventListener("input", syncGameInfoTitles);
+});
+
+$("clearTeamAName").addEventListener("click", () => {
+  $("teamAName").value = "";
+  syncGameInfoTitles();
+  maybeAutoWrite("clearNameA");
+});
+
+$("clearTeamBName").addEventListener("click", () => {
+  $("teamBName").value = "";
+  syncGameInfoTitles();
+  maybeAutoWrite("clearNameB");
+});
+
+/** ====== Sports type -> dynamic controls ====== */
+$("sportsType").addEventListener("change", () => {
+  const prev = $("period").value;
+  applySportMode();
+  if (!$("period").value && prev) $("period").value = prev;
+  maybeAutoWrite("sportsType");
+});
+
+/** ====== Buttons ====== */
+$("btnWrite").addEventListener("click", () => writeConfig("manual"));
+
+$("btnResetScoreA").addEventListener("click", () => {
+  $("scoreA").value = "0";
+  maybeAutoWrite("resetScoreA");
+});
+
+$("btnResetScoreB").addEventListener("click", () => {
+  $("scoreB").value = "0";
+  maybeAutoWrite("resetScoreB");
+});
+
+$("btnResetTeamAWins").addEventListener("click", () => {
+  $("teamAWins").value = "0";
+  maybeAutoWrite("resetTeamAWins");
+});
+
+$("btnResetTeamARecord").addEventListener("click", () => {
+  $("teamALosses").value = "0";
+  maybeAutoWrite("resetTeamALosses");
+});
+
+$("btnResetTeamBWins").addEventListener("click", () => {
+  $("teamBWins").value = "0";
+  maybeAutoWrite("resetTeamBWins");
+});
+
+$("btnResetTeamBRecord").addEventListener("click", () => {
+  $("teamBLosses").value = "0";
+  maybeAutoWrite("resetTeamBLosses");
+});
+
+$("btnResetTime").addEventListener("click", () => {
+  clockRunning = false;
+  clearInterval(clockTimer); clockTimer = null;
+  updateClockBtnIcon();
+
+  clockSeconds = resetBaseSeconds;
+  $("time").value = fmtMMSS(clockSeconds);
+  writeConfig("resetTime");
+});
+
+$("btnResetAll").addEventListener("click", () => {
+  clockRunning = false;
+  clearInterval(clockTimer); clockTimer = null;
+
+  $("teamAName").value = "";
+  $("teamBName").value = "";
+  $("teamAWins").value = "0";
+  $("teamALosses").value = "0";
+  $("teamBWins").value = "0";
+  $("teamBLosses").value = "0";
+  $("teamALogo").value = "";
+  $("teamBLogo").value = "";
+  $("sponsorLogo").value = "";
+  $("leagueLogo").value = "";
+  $("sportsType").value = "FOOTBALL";
+  $("liveDate").value = "";
+  $("liveHour").value = "12";
+  $("liveMinute").value = "00";
+  $("liveAmPm").value = "AM";
+  $("teamAColor").value = "#1e40af";
+  $("teamBColor").value = "#dc2626";
+  $("period").value = "";
+  $("scoreA").value = "0";
+  $("scoreB").value = "0";
+  $("time").value = "10:00";
+  clockSeconds = 10*60;
+  resetBaseSeconds = 10*60;
+
+  playClockRunning = false;
+  clearInterval(playClockTimer); playClockTimer = null;
+  playClockSeconds = 40;
+  playClockResetSeconds = 40;
+  $("playClockInput").value = "40";
+  $("showGameClock").checked = true;
+  $("showShotClock").checked = true;
+
+  const RESET_LOGO_DEFAULTS = { teamALogoScale:"10", teamBLogoScale:"10", sponsorLogoScale:"10", leagueLogoScale:"10" };
+  ["teamALogoScale","teamBLogoScale","sponsorLogoScale","leagueLogoScale"].forEach(id => {
+    $(id).value = RESET_LOGO_DEFAULTS[id];
+    $(id + "Val").textContent = Math.round(parseFloat(RESET_LOGO_DEFAULTS[id])) + "px";
+  });
+  $("teamNameFontSize").value = "25";
+  $("teamNameFontSizeVal").textContent = "25px";
+  $("teamRecordFontSize").value = "25";
+  $("teamRecordFontSizeVal").textContent = "25px";
+
+  syncGameInfoTitles();
+  applySportMode();
+  writeConfig("resetAll");
+});
+
+function updateClockBtnIcon() {
+  $("btnStartPause").textContent = clockRunning ? "⏸" : "▶";
+}
+function updatePlayClockBtnIcon() {
+  $("btnPlayClockStartPause").textContent = playClockRunning ? "⏸" : "▶";
+}
+
+$("btnStartPause").addEventListener("click", async () => {
+  if(clockRunning){
+    clockRunning = false;
+    clearInterval(clockTimer); clockTimer = null;
+    updateClockBtnIcon();
+    await writeConfig("pause");
+    return;
+  }
+
+  const sec = parseMMSS($("time").value);
+  if(sec == null){
+    alert("Clock format must be MM:SS, e.g. 10:00");
+    return;
+  }
+  clockSeconds = sec;
+  resetBaseSeconds = sec;
+  clockRunning = true;
+  updateClockBtnIcon();
+
+  await writeConfig("start");
+
+  clockTimer = setInterval(async () => {
+    if(!clockRunning) return;
+    if(clockSeconds <= 0){
+      clockSeconds = 0;
+      clockRunning = false;
+      clearInterval(clockTimer); clockTimer = null;
+      $("time").value = "00:00";
+      updateClockBtnIcon();
+      await writeConfig("end");
+      return;
+    }
+    clockSeconds -= 1;
+    $("time").value = fmtMMSS(clockSeconds);
+    await writeConfig("tick");
+  }, 1000);
+});
+
+/** ====== Shot Clock ====== */
+$("btnPlayClockStartPause").addEventListener("click", async () => {
+  if (playClockRunning) {
+    playClockRunning = false;
+    clearInterval(playClockTimer); playClockTimer = null;
+    updatePlayClockBtnIcon();
+    await writeConfig("playClockPause");
+    return;
+  }
+
+  const sec = clamp(parseInt($("playClockInput").value, 10) || 40, 0, 99);
+  playClockSeconds = sec;
+  playClockResetSeconds = sec;
+  playClockRunning = true;
+  updatePlayClockBtnIcon();
+  await writeConfig("playClockStart");
+
+  playClockTimer = setInterval(async () => {
+    if (!playClockRunning) return;
+    if (playClockSeconds <= 0) {
+      playClockSeconds = 0;
+      playClockRunning = false;
+      clearInterval(playClockTimer); playClockTimer = null;
+      $("playClockInput").value = "0";
+      updatePlayClockBtnIcon();
+      await writeConfig("playClockEnd");
+      return;
+    }
+    playClockSeconds--;
+    $("playClockInput").value = String(playClockSeconds);
+    await writeConfig("playClockTick");
+  }, 1000);
+});
+
+$("btnPlayClockReset").addEventListener("click", () => {
+  playClockRunning = false;
+  clearInterval(playClockTimer); playClockTimer = null;
+  updatePlayClockBtnIcon();
+  playClockSeconds = playClockResetSeconds;
+  $("playClockInput").value = String(playClockSeconds);
+  writeConfig("playClockReset");
+});
+
+/** ====== Visibility toggles ====== */
+$("showGameClock").addEventListener("change", () => maybeAutoWrite("showGameClock"));
+$("showShotClock").addEventListener("change", () => maybeAutoWrite("showShotClock"));
+
+/** ====== Auto write on input change ====== */
+let typingTimer = null;
+const autoWriteFields = [
+  "teamAName","teamBName","teamAWins","teamALosses","teamBWins","teamBLosses",
+  "teamALogo","teamBLogo","sponsorLogo","leagueLogo","teamAColor","teamBColor",
+  "period","scoreA","scoreB",
+  "time","sportsType","liveDate","liveHour","liveMinute","liveAmPm", "teamNameFontSize","teamRecordFontSize",
+  "teamALogoScale","teamBLogoScale","sponsorLogoScale","leagueLogoScale",
+  "playClockInput"
+];
+
+autoWriteFields.forEach(id => {
+  $(id).addEventListener("input", () => {
+    if (id === "time" && !clockRunning) {
+      const sec = parseMMSS($("time").value);
+      if (sec != null) {
+        resetBaseSeconds = sec;
+        clockSeconds = sec;
+      }
+    }
+
+    if(!$("autoWriteToggle").checked) return;
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => writeConfig("typing"), 300);
+  });
+});
+
+/** init */
+fillTimeSelects();
+applySportMode();
+setEnabled(false);
+
+function updateVersionDisplay() {
+  $("versionLabel").textContent = GLOBAL_VERSION + " ";
+  state.version = GLOBAL_VERSION;
+}
+updateVersionDisplay();
+
+restoreProjectDir().then(loadConfigFromDir);
+setProjectFolderUi();
+</script>
+</body>
+</html>
