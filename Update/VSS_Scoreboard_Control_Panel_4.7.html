@@ -1349,8 +1349,8 @@
           <!-- Footer -->
           <div class="rmg-cell rmg-footer-cell">
             <span class="rmg-font-label" style="white-space:nowrap;">Record Scale</span>
-            <input type="range" id="teamRecordFontSize" min="15" max="100" step="1" value="25" class="scale-slider" disabled style="flex:1;margin-left:10px;" />
-            <span id="teamRecordFontSizeVal" class="scale-val">25px</span>
+            <input type="range" id="teamRecordFontSize" min="30" max="50" step="1" value="30" class="scale-slider" disabled style="flex:1;margin-left:10px;" />
+            <span id="teamRecordFontSizeVal" class="scale-val">30px</span>
           </div>
 
           <div class="hint">
@@ -1990,7 +1990,7 @@ let state = {
   time: "10:00",
   clockRunning: false,
   teamNameFontSize: 25,
-  teamRecordFontSize: 25,
+  teamRecordFontSize: 30,
   teamALogoScale: 25,
   teamBLogoScale: 25,
   sponsorLogoScale: 25,
@@ -2065,7 +2065,7 @@ function uiToState(){
   state.scoreA = clamp(parseInt($("scoreA").value || "0", 10) || 0, 0, 999);
   state.scoreB = clamp(parseInt($("scoreB").value || "0", 10) || 0, 0, 999);
   state.teamNameFontSize = clamp(parseFloat($("teamNameFontSize").value) || 25, 15, 50);
-  state.teamRecordFontSize = clamp(parseFloat($("teamRecordFontSize").value) || 25, 15, 100);
+  state.teamRecordFontSize = clamp(parseFloat($("teamRecordFontSize").value) || 30, 30, 50);
   state.teamALogoScale = clamp(parseFloat($("teamALogoScale").value) || 25, 5, 100);
   state.teamBLogoScale = clamp(parseFloat($("teamBLogoScale").value) || 25, 5, 100);
   state.sponsorLogoScale = clamp(parseFloat($("sponsorLogoScale").value) || 25, 5, 100);
@@ -2140,7 +2140,7 @@ function stateToUi(){
   const nameScale = clamp(parseFloat(state.teamNameFontSize) || 25, 15, 50);
   $("teamNameFontSize").value = String(nameScale);
   $("teamNameFontSizeVal").textContent = Math.round(nameScale) + "px";
-  const recScale = clamp(parseFloat(state.teamRecordFontSize) || 25, 15, 100);
+  const recScale = clamp(parseFloat(state.teamRecordFontSize) || 30, 30, 50);
   $("teamRecordFontSize").value = String(recScale);
   $("teamRecordFontSizeVal").textContent = Math.round(recScale) + "px";
   const LOGO_DEFAULTS = { teamALogoScale:25, teamBLogoScale:25, sponsorLogoScale:25, leagueLogoScale:25 };
@@ -2556,8 +2556,8 @@ $("btnResetAll").addEventListener("click", () => {
   });
   $("teamNameFontSize").value = "25";
   $("teamNameFontSizeVal").textContent = "25px";
-  $("teamRecordFontSize").value = "25";
-  $("teamRecordFontSizeVal").textContent = "25px";
+  $("teamRecordFontSize").value = "30";
+  $("teamRecordFontSizeVal").textContent = "30px";
   $("barH").value = "100"; $("barHVal").textContent = "100px";
   $("barW").value = "1680"; $("barWVal").textContent = "1680px";
 
