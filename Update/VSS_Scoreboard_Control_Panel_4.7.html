@@ -764,6 +764,7 @@
       border-radius: 8px;
       overflow: hidden;
       border: 1px solid var(--line);
+      width: 100%;
     }
     .to-max-btn {
       width: 30px;
@@ -784,6 +785,7 @@
     .to-max-btn:active:not(:disabled) { background: rgba(255,255,255,.22); }
     .to-max-btn:disabled { opacity: .3; cursor: not-allowed; }
     .to-max-num {
+      flex: 1;
       min-width: 32px;
       text-align: center;
       font-size: 16px;
@@ -1085,6 +1087,7 @@
         <h2>VSS Team Info</h2>
         <div class="title-divider"></div>
 
+        <div class="section-head-banner" style="margin-top:0">Team BIO</div>
         <div class="info-modern-grid">
           <div class="rmg-header">Team</div>
           <div class="rmg-header">Name</div>
@@ -1211,7 +1214,7 @@
         <div class="game-combined-grid">
 
           <div class="status-record-score-title">
-            <div class="section-head-banner">Team Record &amp; Score</div>
+            <div class="section-head-banner" style="margin-top:0">Team Record &amp; Score</div>
           </div>
 
           <div class="status-clock">
@@ -1427,11 +1430,6 @@
                   <div class="to-accent-bar side-a"></div>
                   <span class="to-team-name" id="timeoutLabelA">Home</span>
                 </div>
-                <div class="to-max-stepper">
-                  <button class="to-max-btn" id="btnMaxDecA" disabled>−</button>
-                  <span class="to-max-num" id="maxTimeoutsAVal">3</span>
-                  <button class="to-max-btn" id="btnMaxIncA" disabled>+</button>
-                </div>
                 <input id="maxTimeoutsA" type="number" min="3" max="9" value="3" style="display:none" disabled />
               </div>
               <div class="to-dots-area">
@@ -1444,9 +1442,14 @@
                   <span id="timeoutsAVal">3</span>
                 </div>
               </div>
+              <div class="to-max-stepper">
+                <button class="to-max-btn" id="btnMaxDecA" disabled>−</button>
+                <span class="to-max-num" id="maxTimeoutsAVal">3</span>
+                <button class="to-max-btn" id="btnMaxIncA" disabled>+</button>
+              </div>
               <div class="to-sub-btns">
-                <button id="btnUseTimeoutA" class="to-use-btn" disabled>&#9654; Use T/O</button>
-                <button id="btnRestoreTimeoutA" class="to-restore-btn" disabled>+1 Restore</button>
+                <button id="btnUseTimeoutA" class="to-use-btn" disabled>&#9654; T/O</button>
+                <button id="btnRestoreTimeoutA" class="to-restore-btn" disabled>+1</button>
                 <button id="btnResetTimeoutA" class="to-reset-btn" disabled>&#8635; Reset</button>
               </div>
               <input id="showTimeoutBannerA" type="checkbox" style="display:none" />
@@ -1458,11 +1461,6 @@
                 <div style="display:flex;align-items:center;gap:8px;">
                   <div class="to-accent-bar side-b"></div>
                   <span class="to-team-name" id="timeoutLabelB">Visitor</span>
-                </div>
-                <div class="to-max-stepper">
-                  <button class="to-max-btn" id="btnMaxDecB" disabled>−</button>
-                  <span class="to-max-num" id="maxTimeoutsBVal">3</span>
-                  <button class="to-max-btn" id="btnMaxIncB" disabled>+</button>
                 </div>
                 <input id="maxTimeoutsB" type="number" min="3" max="9" value="3" style="display:none" disabled />
               </div>
@@ -1476,9 +1474,14 @@
                   <span id="timeoutsBVal">3</span>
                 </div>
               </div>
+              <div class="to-max-stepper">
+                <button class="to-max-btn" id="btnMaxDecB" disabled>−</button>
+                <span class="to-max-num" id="maxTimeoutsBVal">3</span>
+                <button class="to-max-btn" id="btnMaxIncB" disabled>+</button>
+              </div>
               <div class="to-sub-btns">
-                <button id="btnUseTimeoutB" class="to-use-btn" disabled>&#9654; Use T/O</button>
-                <button id="btnRestoreTimeoutB" class="to-restore-btn" disabled>+1 Restore</button>
+                <button id="btnUseTimeoutB" class="to-use-btn" disabled>&#9654; T/O</button>
+                <button id="btnRestoreTimeoutB" class="to-restore-btn" disabled>+1</button>
                 <button id="btnResetTimeoutB" class="to-reset-btn" disabled>&#8635; Reset</button>
               </div>
               <input id="showTimeoutBannerB" type="checkbox" style="display:none" />
