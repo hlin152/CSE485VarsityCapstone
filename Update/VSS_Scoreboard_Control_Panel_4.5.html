@@ -619,7 +619,7 @@
             <input type="range" id="barH" min="100" max="300" step="10" value="100" class="scale-slider" disabled style="flex:1;margin-left:4px;" />
             <span id="barHVal" class="scale-val">100px</span>
             <span class="rmg-font-label" style="white-space:nowrap;margin-left:8px;">Bar Width</span>
-            <input type="range" id="barW" min="1200" max="1920" step="10" value="1680" class="scale-slider" disabled style="flex:1;margin-left:4px;" />
+            <input type="range" id="barW" min="1000" max="1920" step="10" value="1680" class="scale-slider" disabled style="flex:1;margin-left:4px;" />
             <span id="barWVal" class="scale-val">1680px</span>
           </div>
 
@@ -1322,7 +1322,7 @@ function uiToState(){
   state.showGameClock = $("showGameClock").checked;
   state.showShotClock = $("showShotClock").checked;
   state.barH = parseInt($("barH").value) || 100;
-  state.barW = clamp(parseInt($("barW").value) || 1680, 1200, 1920);
+  state.barW = clamp(parseInt($("barW").value) || 1680, 1000, 1920);
 }
 
 function stateToUi(){
