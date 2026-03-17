@@ -5,7 +5,7 @@
   @Purpose: Customize Control UI Panel to let sponsor modify the game info while live-stream
   @SportSupported: Football, Basketball, Lacrosse, Volleyball, Hockey
   @Version: 4.7
-  @Update: Timeout Controls and adjustment some feature logic
+  @Update: Integrated Timeout Controls and adjustment some feature logic
 -->
 <!doctype html>
 <html lang="en">
@@ -555,12 +555,15 @@
     .to-team-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
+      width: 100%;
     }
     .to-team-card {
       padding: 12px 14px;
       display: flex;
       flex-direction: column;
       gap: 10px;
+      min-width: 0;
+      overflow: hidden;
     }
     .to-team-card:first-child { border-right: 1px solid var(--line); }
     .to-team-header {
