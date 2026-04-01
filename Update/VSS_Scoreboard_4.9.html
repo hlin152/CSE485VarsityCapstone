@@ -1,0 +1,1780 @@
+<!--
+  @Author: Hsuan-Jun (Raymond) Lin
+  @Class: ASU CSE 486 Capstone Project - Varsity Sports Show
+  @Title: VSS Scoreboard
+  @Purpose: Sponsor would like to use Scoreboard HTML on OBS for live-stream Overlay
+  @SportSupported: Football, Basketball, Lacrosse, Volleyball, Hockey
+  @Version: 4.9
+  @Update: 
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VSS Scoreboard Overlay</title>
+  <style>
+    :root {
+      --bar-h: 150px;
+      --bar-w: 1680px;
+      --radius: 12px;
+      --team-color-left: #1e40af;
+      --team-color-right: #dc2626;
+      /* Update */
+      --team-name-size: 25px;
+      --team-record-size: 25px;
+      /* Above */
+      --bg-primary: rgba(15, 23, 42, 0.95);
+      --bg-secondary: rgba(30, 41, 59, 0.95);
+      --bg-accent: rgba(255, 255, 255, 0.08);
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.85);
+      --text-muted: rgba(255, 255, 255, 0.65);
+      --score-bg: #0f172a;
+      --score-text: #ffffff;
+      --clock-active: #10b981;
+      --clock-paused: #f59e0b;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* OBS Browser Source */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    .scoreboard-wrapper {
+      position: absolute;
+      width: var(--bar-w);
+      left: 50%;
+      bottom: 80px; /* Change the bottom height if needed on OBS */
+      transform: translateX(-50%);
+      height: var(--bar-h);
+      overflow: visible;
+    }
+
+    /* Shot Clock — Modern Professional Sports Design */
+    .play-clock-pill {
+      position: absolute;
+      bottom: 100%;
+      top: auto;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 376px;
+      background: linear-gradient(180deg, rgba(6, 10, 22, 0.97) 0%, rgba(12, 20, 40, 0.97) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      padding: 10px 28px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+    }
+
+    /* Top accent glow bar — color tracks clock state */
+    .play-clock-pill::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--clock-active);
+      box-shadow: 0 0 10px var(--clock-active), 0 0 28px rgba(16, 185, 129, 0.45);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .play-clock-pill.paused::before {
+      background: var(--clock-paused);
+      box-shadow: 0 0 10px var(--clock-paused), 0 0 28px rgba(245, 158, 11, 0.45);
+    }
+    .play-clock-pill.urgent::before {
+      background: #ef4444;
+      box-shadow: 0 0 10px #ef4444, 0 0 28px rgba(239, 68, 68, 0.55);
+    }
+
+    .play-clock-label {
+      display: none;
+    }
+
+    .play-clock-time {
+      font-family: 'Oswald', 'Impact', 'Arial Black', sans-serif;
+      font-size: 52px;
+      font-weight: 700;
+      color: var(--clock-active);
+      line-height: 1;
+      text-shadow: 0 0 22px rgba(16, 185, 129, 0.45), 0 2px 6px rgba(0, 0, 0, 0.6);
+      min-width: 2ch;
+      text-align: center;
+      transition: color 0.3s, text-shadow 0.3s;
+    }
+
+    .play-clock-time.paused {
+      color: var(--clock-paused);
+      text-shadow: 0 0 22px rgba(245, 158, 11, 0.45), 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+
+    .play-clock-time.urgent {
+      color: #ef4444;
+      text-shadow: 0 0 22px rgba(239, 68, 68, 0.55), 0 2px 6px rgba(0, 0, 0, 0.6);
+      animation: urgentPulse 0.55s ease-in-out infinite alternate;
+    }
+
+    @keyframes urgentPulse {
+      from { text-shadow: 0 0 10px rgba(239, 68, 68, 0.45), 0 2px 6px rgba(0, 0, 0, 0.6); }
+      to   { text-shadow: 0 0 36px rgba(239, 68, 68, 0.95), 0 0 64px rgba(239, 68, 68, 0.4), 0 2px 6px rgba(0, 0, 0, 0.6); }
+    }
+
+    /* Progress bar — drains as shot clock counts down */
+    .shot-clock-bar {
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 7px;
+    }
+
+    .shot-clock-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: var(--clock-active);
+      border-radius: 2px;
+      transition: width 0.9s linear, background 0.3s, box-shadow 0.3s;
+      box-shadow: 0 0 6px var(--clock-active);
+    }
+
+    .shot-clock-bar-fill.paused {
+      background: var(--clock-paused);
+      box-shadow: 0 0 6px var(--clock-paused);
+    }
+
+    .shot-clock-bar-fill.urgent {
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+
+    .scoreboard-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+      box-shadow: var(--shadow);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-left: none;
+      border-right: none;
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Sponsor/League Section — auto-size to fit logo, never below 80px */
+    .sponsor-section,
+    .league-section {
+      flex: 0 0 auto;
+      min-width: 80px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-accent);
+      overflow: hidden;
+    }
+
+    .sponsor-section {
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .league-section {
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sponsor-logo,
+    .league-logo {
+      width: 48px;
+      height: 48px;
+      max-width: calc(var(--bar-h) - 12px);  /* Hard cap: JS inline size cannot exceed bar height */
+      max-height: calc(var(--bar-h) - 12px);
+      object-fit: contain;
+      filter: brightness(1.1);
+      display: block;
+    }
+
+    /* Team Sections */
+    .team-section {
+      flex: 1;
+      min-width: 0;
+      display: grid;
+      align-items: center;
+      position: relative;
+      overflow: hidden; /* Clip any logo or text that grows beyond bar bounds */
+    }
+
+    .team-left {
+      background: linear-gradient(90deg, rgba(30, 64, 175, 0.15) 0%, transparent 100%);
+      grid-template-columns: minmax(0, 1fr) auto;
+      /* Right padding reserves space for the absolutely-centered center-section (180px / 2 = 90px) */
+      padding: 0 90px 0 15px;
+    }
+
+    .team-right {
+      background: linear-gradient(90deg, transparent 0%, rgba(220, 38, 38, 0.15) 100%);
+      grid-template-columns: auto 1fr;
+      /* Left padding reserves space for the absolutely-centered center-section (180px / 2 = 90px) */
+      padding: 0 15px 0 90px;
+    }
+
+    .team-info {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    .team-left .team-info {
+      flex-direction: row;
+      justify-content: flex-start;
+    }
+
+    .team-right .team-info {
+      flex-direction: row-reverse;
+      justify-content: flex-start;
+    }
+
+    .team-logo {
+      width: 54px;
+      height: 54px;
+      max-width: calc(var(--bar-h) - 12px); /* Never wider than bar height allows */
+      max-height: calc(var(--bar-h) - 12px); /* Hard cap: JS inline size cannot exceed this */
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+    /* Keep room near outer edges for larger logo scales */
+    .team-left .team-logo { margin-left: 8px; }
+    .team-right .team-logo { margin-right: 8px; }
+
+    .team-logo:hover {
+      transform: scale(1.05);
+    }
+
+    .team-name-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      flex: 1;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .team-left .team-name-container {
+      padding-right: 10px;
+    }
+
+    .team-right .team-name-container {
+      padding-left: 10px;
+      text-align: right;
+    }
+
+    .team-name {
+      font-weight: 700;
+      font-size: var(--team-name-size);
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+      width: 100%;
+    }
+
+    .team-right .team-name {
+      text-align: right;
+    }
+
+    .team-record {
+      font-size: var(--team-record-size);
+      color: var(--text-muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+
+    .team-right .team-record {
+      text-align: right;
+    }
+
+    /* Score Display */
+    .score-display {
+      width: 90px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Oswald', 'Impact', 'Arial Black', sans-serif;
+      font-weight: 700;
+      font-size: 58px;
+      color: var(--score-text);
+      background: var(--score-bg);
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .team-left .score-display {
+      border-left: 3px solid var(--team-color-left);
+      margin-left: 0;
+    }
+
+    .team-right .score-display {
+      border-right: 3px solid var(--team-color-right);
+      margin-right: 0;
+    }
+
+    .score-display::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    }
+
+    /* Center Clock Section — always locked to true screen center */
+    .center-section {
+      box-shadow: none;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 180px;
+      height: 100%;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      padding: 10px 10px;
+      border: none;
+    }
+
+    .clock-display {
+      font-family: 'Roboto Mono', 'Courier New', monospace;
+      font-weight: 600;
+      font-size: 38px;
+      line-height: 1;
+      color: var(--clock-active);
+      margin-bottom: 2px;
+      text-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+      transition: var(--transition);
+    }
+
+    .clock-display.paused {
+      color: var(--clock-paused);
+      text-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+    }
+
+    .sport-display {
+      display: none;
+    }
+
+    .period-shotclock-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding-bottom: 25px;
+    }
+
+    .football-down-distance {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + var(--riser-h, 50px) + 24px);
+      transform: translateX(-50%);
+      z-index: 4;
+      display: none;
+      align-items: stretch;
+      justify-content: center;
+      border-radius: 10px;
+      overflow: hidden;
+      background: linear-gradient(160deg, #080f28 0%, #050b1d 100%);
+      box-shadow:
+        0 16px 48px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      white-space: nowrap;
+      width: 540px;
+    }
+
+    /* Top-edge gloss line */
+    .football-down-distance::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0.22) 35%,
+        rgba(255,255,255,0.22) 65%,
+        rgba(255,255,255,0) 100%);
+      pointer-events: none;
+    }
+
+    /* Left panel — down badge */
+    .football-dd-tag {
+      position: relative;
+      z-index: 1;
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      gap: 2px;
+      background: linear-gradient(180deg, #2563eb 0%, #1a4fd8 55%, #1341c2 100%);
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: inset -4px 0 18px rgba(0,0,0,0.25);
+    }
+
+    .football-dd-tag .dd-ordinal {
+      font-family: 'Oswald', 'Arial Black', sans-serif;
+      font-size: 25px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.35);
+    }
+
+    .football-dd-tag .dd-label {
+      font-family: 'Oswald', 'Arial Black', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.55);
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+    }
+
+    /* Right panel — distance value */
+    .football-dd-value {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 24px;
+      font-family: 'Oswald', 'Arial Black', sans-serif;
+      font-size: 25px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .football-dd-value .sep {
+      color: rgba(255, 255, 255, 0.38);
+      font-size: 20px;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    .football-dd-value .distance {
+      color: #fbbf24;
+      text-shadow:
+        0 0 24px rgba(251, 191, 36, 0.45),
+        0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    /* 2-Point Attempt — centered full-width */
+    .football-down-distance.is-special {
+      width: 540px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .football-down-distance.is-special .football-dd-tag {
+      display: none;
+    }
+
+    .football-down-distance.is-special .football-dd-value {
+      padding: 12px 28px;
+      width: 100%;
+      justify-content: center;
+      font-size: 22px;
+      letter-spacing: 0.14em;
+      color: #fbbf24;
+      text-shadow:
+        0 0 24px rgba(251, 191, 36, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+
+    .period-display {
+      flex: 1;
+      text-align: center;
+      font-size: 30px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .inline-shot-clock {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .inline-shot-clock-time {
+      font-family: 'Roboto Mono', 'Courier New', monospace;
+      font-size: 30px;
+      font-weight: 600;
+      color: var(--clock-active);
+      transition: var(--transition);
+    }
+
+    .inline-shot-clock-time.paused {
+      color: var(--clock-paused);
+    }
+
+    .inline-shot-clock-time.urgent {
+      color: #ef4444;
+    }
+
+    .game-status {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+      letter-spacing: 0.5px;
+    }
+    
+    .game-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      white-space: nowrap;
+    }
+
+    /* Team colors for long names */
+    .team-right.long-name .team-logo {
+      width: 50px;
+      height: 50px;
+    }
+
+    /* Animation for score updates */
+    @keyframes scorePulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .score-update {
+      animation: scorePulse 0.4s ease;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1150px) {
+      :root {
+        --bar-w: 100vw;
+        --team-name-size: 25px;
+        --team-record-size: 25px;
+      }
+
+      .sponsor-section,
+      .league-section {
+        flex: 0 0 auto;
+        min-width: 70px;
+      }
+
+      /* Center narrows to 170px → half = 85px side padding */
+      .center-section {
+        width: 170px;
+      }
+
+      .team-left {
+        padding: 0 85px 0 15px;
+      }
+
+      .team-right {
+        padding: 0 15px 0 85px;
+      }
+
+      .score-display {
+        width: 100px;
+        font-size: 52px;
+      }
+
+      .team-logo {
+        width: 50px;
+        height: 50px;
+      }
+
+      .team-name {
+        font-size: var(--team-name-size);
+      }
+
+      .clock-display {
+        font-size: 38px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      :root {
+        --bar-w: 100vw;
+        --team-name-size: 25px;
+        --team-record-size: 25px;
+      }
+
+      .sponsor-section,
+      .league-section {
+        flex: 0 0 auto;
+        min-width: 70px;
+      }
+
+      /* Center narrows to 160px → half = 80px side padding */
+      .center-section {
+        width: 160px;
+      }
+
+      .team-left {
+        padding: 0 80px 0 15px;
+      }
+
+      .team-right {
+        padding: 0 15px 0 80px;
+      }
+
+      .score-display {
+        width: 90px;
+        font-size: 48px;
+      }
+
+      .team-logo {
+        width: 46px;
+        height: 46px;
+      }
+
+      .team-name {
+        font-size: var(--team-name-size);
+      }
+
+      .clock-display {
+        font-size: 34px;
+      }
+
+      .period-display {
+        font-size: 18px;
+      }
+
+      .inline-shot-clock-time {
+        font-size: 18px;
+      }
+
+      .football-down-distance {
+        width: min(540px, 90vw);
+        border-radius: 8px;
+      }
+
+      .football-dd-tag {
+        padding: 8px 13px;
+      }
+
+      .football-dd-tag .dd-ordinal { font-size: 20px; }
+      .football-dd-tag .dd-label   { font-size: 8px; }
+
+      .football-dd-value {
+        font-size: 20px;
+        padding: 0 16px;
+        gap: 6px;
+      }
+
+      .football-dd-value .sep { font-size: 16px; }
+
+      .football-down-distance.is-special .football-dd-value {
+        font-size: 18px;
+        padding: 10px 18px;
+      }
+    }
+
+    /* Hide broken/empty images */
+    img[src=""], img:not([src]) {
+      display: none;
+    }
+
+    /* ── Info Riser ── */
+    .info-riser {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      right: 0;
+      height: var(--riser-h, 50px);
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+      background: linear-gradient(90deg,
+        rgba(0,3,12,0.98) 0%,
+        rgba(4,10,28,0.98) 18%,
+        rgba(6,14,36,0.96) 50%,
+        rgba(4,10,28,0.98) 82%,
+        rgba(0,3,12,0.98) 100%
+      );
+      border-top: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px 10px 0 0;
+      /* Slide up to reveal */
+      transform: translateY(0);
+      opacity: 1;
+      transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.4s ease;
+    }
+
+    /* Sweep shimmer — loops continuously */
+    .info-riser::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg,
+        transparent 30%,
+        rgba(255,255,255,0.045) 50%,
+        transparent 70%
+      );
+      background-size: 200% 100%;
+      animation: riserShimmer 5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes riserShimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .info-riser.hidden {
+      transform: translateY(-115%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Badge position — right: DD goes left, badge+accent go right */
+    .info-riser[data-badge-pos="right"] .info-riser-accent { order: 10; }
+    .info-riser[data-badge-pos="right"] .info-riser-badge {
+      order: 9;
+      margin-left: 20px;
+      margin-right: 14px;
+      clip-path: polygon(9px 0, 100% 0, 100% 100%, 0 100%);
+    }
+    .info-riser[data-badge-pos="right"] .info-riser-text { padding-left: 18px; }
+    /* Badge right: DD + its accent move to the far left */
+    .info-riser[data-badge-pos="right"] .info-riser-dd {
+      order: -1;
+      margin-left: 14px;
+      margin-right: auto;
+      clip-path: polygon(0 0, 100% 0, calc(100% - 11px) 100%, 0 100%);
+    }
+    .info-riser[data-badge-pos="right"] .info-riser-dd-accent { order: -2; }
+
+    /* Thick left accent bar */
+    .info-riser-accent {
+      flex-shrink: 0;
+      width: 5px;
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 0 18px rgba(16,185,129,0.8), 0 0 40px rgba(16,185,129,0.35);
+    }
+
+    /* "INFO" badge — angled parallelogram */
+    .info-riser-badge {
+      flex-shrink: 0;
+      align-self: center;
+      background: #10b981;
+      color: #000;
+      font-family: 'Oswald', 'Arial Black', sans-serif;
+      font-size: 25px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding: 5px 22px 5px 14px;
+      margin-left: 14px;
+      margin-right: 20px;
+      clip-path: polygon(0 0, 100% 0, calc(100% - 11px) 100%, 0 100%);
+      text-shadow: none;
+    }
+
+
+    /* Main text */
+    .info-riser-text {
+      flex: 1;
+      align-self: center;
+      font-family: 'Oswald', 'Impact', 'Arial Black', sans-serif;
+      font-size: 22px;
+      font-weight: 500;
+      color: #ffffff;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 0 24px rgba(255,255,255,0.18), 0 1px 5px rgba(0,0,0,0.9);
+    }
+
+    /* True center — overlay text across full riser width */
+    .info-riser[data-text-align="center"] .info-riser-text {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    /* When centered + badge right + no DD: push badge+accent to right end */
+    .info-riser[data-text-align="center"][data-badge-pos="right"]:not([data-has-dd="true"]) {
+      justify-content: flex-end;
+    }
+
+    /* ── Down & Distance badge inside the Info Riser ── */
+    .info-riser-dd {
+      display: none;
+      flex-shrink: 0;
+      align-self: center;
+      align-items: center;
+      background: linear-gradient(180deg, #2563eb 0%, #1341c2 100%);
+      font-family: 'Oswald', 'Arial Black', sans-serif;
+      font-size: 25px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding: 5px 14px 5px 22px;
+      margin-left: auto;
+      margin-right: 14px;
+      clip-path: polygon(11px 0, 100% 0, 100% 100%, 0 100%);
+      white-space: nowrap;
+      gap: 6px;
+    }
+    .info-riser-dd.has-dd { display: flex; }
+    .info-riser-dd-accent {
+      display: none;
+      flex-shrink: 0;
+      width: 5px;
+      background: linear-gradient(180deg, #2563eb 0%, #1341c2 100%);
+      box-shadow: 0 0 18px rgba(37,99,235,0.8), 0 0 40px rgba(37,99,235,0.35);
+      align-self: stretch;
+    }
+    .info-riser-dd.has-dd ~ .info-riser-dd-accent { display: block; }
+    .info-riser-dd .dd-down {
+      color: #fff;
+      text-shadow: none;
+    }
+    .info-riser-dd .dd-sep {
+      color: rgba(255,255,255,0.45);
+      font-size: 20px;
+      font-weight: 400;
+    }
+    .info-riser-dd .dd-dist {
+      color: #fbbf24;
+      text-shadow: 0 0 18px rgba(251,191,36,0.5);
+    }
+
+  /* ── Timeout Dots ── */
+  .timeout-dots {
+    display: flex;
+    gap: 5px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .team-left .timeout-dots { justify-content: flex-start; }
+  .team-right .timeout-dots { justify-content: flex-end; }
+  .timeout-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    flex-shrink: 0;
+    transition: background 0.3s, opacity 0.3s;
+  }
+  .timeout-dot.used {
+    background: transparent;
+    opacity: 0.2;
+  }
+  .timeout-dots.hidden { display: none !important; }
+
+  /* ── Timeout Center Overlay ── */
+  /* ── Timeout Banner — Animated Modern Sports ── */
+
+  @keyframes toBannerReveal {
+    0%   { clip-path: inset(0 100% 0 0); opacity: 1; }
+    100% { clip-path: inset(0 0% 0 0);   opacity: 1; }
+  }
+  @keyframes toFlashBar {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+  @keyframes toGoldPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245,166,35,0), 0 16px 60px rgba(0,0,0,0.8); }
+    50%      { box-shadow: 0 0 28px 6px rgba(245,166,35,0.35), 0 16px 60px rgba(0,0,0,0.8); }
+  }
+  @keyframes toSweep {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+  }
+  @keyframes toLabelIn {
+    0%   { opacity: 0; letter-spacing: 14px; }
+    100% { opacity: 1; letter-spacing: 6px; }
+  }
+  @keyframes toTeamIn {
+    0%   { opacity: 0; transform: translateY(12px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes toDividerGrow {
+    0%   { width: 0; }
+    100% { width: 100%; }
+  }
+  @keyframes toBgShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .timeout-center-overlay {
+    position: absolute;
+    bottom: calc(100% + var(--riser-h, 50px) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 580px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    z-index: 9999;
+    border-radius: 6px;
+    overflow: hidden;
+    clip-path: inset(0 100% 0 0);
+    animation:
+      toBannerReveal 0.55s cubic-bezier(0.77, 0, 0.18, 1) 0.05s forwards,
+      toGoldPulse    2.4s ease-in-out 0.8s infinite;
+    box-shadow: 0 16px 60px rgba(0,0,0,0.8);
+  }
+  /* Animated gradient background */
+  .timeout-center-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg,
+      #0a0e1a 0%, #0f1628 30%, #1a1000 60%, #0a0e1a 100%
+    );
+    background-size: 300% 300%;
+    animation: toBgShift 5s ease infinite;
+    z-index: 0;
+  }
+  /* Light sweep flash */
+  .timeout-center-overlay::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 60px;
+    background: linear-gradient(90deg,
+      transparent, rgba(255,255,255,0.12), transparent
+    );
+    animation: toSweep 2.2s ease-in-out 0.7s infinite;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .timeout-center-overlay.hidden {
+    clip-path: inset(0 0 0 100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: clip-path 0.3s ease, opacity 0.2s ease;
+    animation: none;
+  }
+
+  /* Top gold flash bar */
+  .timeout-flash-bar {
+    position: relative;
+    z-index: 3;
+    height: 4px;
+    background: linear-gradient(90deg, #f5a623, #ffd700, #f5a623, #d97706);
+    background-size: 200% 100%;
+    animation: toBgShift 1.8s linear infinite, toFlashBar 1.2s ease-in-out 0.8s infinite;
+  }
+
+  /* Main body */
+  .timeout-center-content {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0;
+  }
+
+  /* Left badge block */
+  .timeout-center-accent {
+    width: 90px;
+    min-height: 90px;
+    background: linear-gradient(160deg, #f5a623 0%, #e08000 50%, #b85e00 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    gap: 2px;
+    padding: 16px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .timeout-center-accent::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  }
+  .timeout-center-accent-icon {
+    font-size: 28px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  }
+  .timeout-center-accent-text {
+    font-family: 'Oswald', 'Arial Black', sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: rgba(0,0,0,0.55);
+    text-transform: uppercase;
+  }
+
+  /* Right text area */
+  .timeout-center-text-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 18px 24px;
+    gap: 5px;
+    flex: 1;
+  }
+  .timeout-center-label {
+    font-family: 'Oswald', 'Arial Black', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    color: #f5a623;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: toLabelIn 0.5s ease 0.65s forwards;
+  }
+  .timeout-center-divider {
+    height: 2px;
+    width: 0;
+    background: linear-gradient(90deg, #f5a623, rgba(245,166,35,0.1));
+    animation: toDividerGrow 0.5s ease 0.75s forwards;
+  }
+  .timeout-center-team {
+    font-family: 'Oswald', 'Arial Black', sans-serif;
+    font-size: 30px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    line-height: 1.1;
+    word-break: break-word;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+    opacity: 0;
+    animation: toTeamIn 0.45s ease 0.85s forwards;
+  }
+
+  /* Bottom accent line */
+  .timeout-bottom-bar {
+    position: relative;
+    z-index: 3;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #f5a623 30%, #ffd700 50%, #f5a623 70%, transparent);
+  }
+
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="scoreboard-wrapper">
+  <!-- Info Riser — shown/hidden via control panel -->
+  <div class="info-riser hidden" id="infoRiser">
+    <div class="info-riser-accent"></div>
+    <div class="info-riser-badge">INFO</div>
+    <div class="info-riser-text" id="infoRiserText"></div>
+    <div class="info-riser-dd" id="infoRiserDD"></div>
+    <div class="info-riser-dd-accent"></div>
+  </div>
+
+  <!-- Timeout Banner — appears above info riser -->
+  <div class="timeout-center-overlay hidden" id="timeoutCenterOverlay">
+    <div class="timeout-flash-bar"></div>
+    <div class="timeout-center-content">
+      <div class="timeout-center-accent">
+        <div class="timeout-center-accent-icon">⏱</div>
+      </div>
+      <div class="timeout-center-text-block">
+        <div class="timeout-center-label">Timeout</div>
+        <div class="timeout-center-divider"></div>
+        <div class="timeout-center-team" id="timeoutCenterTeam"></div>
+      </div>
+    </div>
+    <div class="timeout-bottom-bar"></div>
+  </div>
+
+  <div class="scoreboard-container">
+    <!-- Left Sponsor/League Logo -->
+    <div class="sponsor-section">
+      <img id="sponsorLogo" class="sponsor-logo" src="" alt="Sponsor Logo" />
+    </div>
+
+    <!-- Left Team -->
+    <div class="team-section team-left">
+      <div class="team-info">
+        <img id="teamALogo" class="team-logo" src="" alt="Team A Logo" />
+        <div class="team-name-container">
+          <div class="team-name" id="teamAName"></div>
+          <div class="team-record" id="teamARecord"></div>
+          <div class="timeout-dots" id="timeoutDotsA"></div>
+        </div>
+      </div>
+      <div class="score-display" id="scoreA"></div>
+    </div>
+
+    <!-- Center Clock/Period -->
+    <div class="center-section">
+      <div class="clock-display" id="time"></div>
+      <div class="sport-display" id="sportsType"></div>
+      <div class="period-shotclock-row">
+        <div class="period-display" id="period"></div>
+        <div class="inline-shot-clock paused" id="inlineShotClock">
+          <span class="inline-shot-clock-time paused" id="inlineShotClockDisplay">40</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Team -->
+    <div class="team-section team-right" id="rightTeamSection">
+      <div class="score-display" id="scoreB"></div>
+      <div class="team-info">
+        <img id="teamBLogo" class="team-logo" src="" alt="Team B Logo" />
+        <div class="team-name-container">
+          <div class="team-name" id="teamBName"></div>
+          <div class="team-record" id="teamBRecord"></div>
+          <div class="timeout-dots" id="timeoutDotsB"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right League Logo -->
+    <div class="league-section">
+      <img id="leagueLogo" class="league-logo" src="" alt="League Logo" />
+    </div>
+  </div>
+  </div><!-- end scoreboard-wrapper -->
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      teamAName: "",
+      teamBName: "",
+      teamARecord: "",
+      teamBRecord: "",
+      scoreA: "0",
+      scoreB: "0",
+      time: "10:00",
+      period: "Q1",
+      sportsType: "",
+      sponsorLogo: "",
+      leagueLogo: "",
+      teamALogo: "",
+      teamBLogo: "",
+      clockRunning: false,
+      teamAColor: "#1e40af",
+      teamBColor: "#dc2626",
+      teamNameFontSize: 1.5,
+      teamRecordFontSize: 1.0,
+      teamALogoScale: 1.0,
+      teamBLogoScale: 1.0,
+      sponsorLogoScale: 1.0,
+      leagueLogoScale: 1.0,
+      // Game clock local state
+      localClockRunning: false,
+      localClockSeconds: 600,
+      lastSyncTime: 0,
+      // Shot clock
+      playClockSeconds: 40,
+      playClockRunning: false,
+      localPlayClockRunning: false,
+      localPlayClockSeconds: 40,
+      // Visibility
+      showGameClock: true,
+      showShotClock: true,
+      // Bar dimensions
+      barH: 100,
+      barW: 1680,
+      // Info riser
+      infoRiserBadge: "INFO",
+      infoRiserBadgeColor: "",
+      infoRiserBgColor: "",
+      infoRiserBadgePos: "left",
+      showInfoRiserBadge: true,
+      infoRiserText: "",
+      infoRiserAlign: "center",
+      showInfoRiser: false,
+      infoRiserFontSize: 30,
+      infoRiserHeight: 50,
+      // Timeout
+      timeoutsA: 3,
+      timeoutsB: 3,
+      maxTimeoutsA: 3,
+      maxTimeoutsB: 3,
+      showTimeoutDots: true,
+      showTimeoutBanner: false,
+      timeoutBannerTeam: "",
+      footballDownDistanceText: "",
+    };
+
+    // Local timer variables
+    let localTimer = null;
+    let lastConfigClockSeconds = 600;
+    let playClockTimer = null;
+    let lastConfigPlayClockSeconds = 40;
+    let shotClockMaxSeconds = 40;
+
+    // Check for long team names
+    function checkTeamNameLength() {
+      const teamBName = state.teamBName || "";
+      const rightSection = $("rightTeamSection");
+      
+      if (teamBName.length > 10) {
+        rightSection.classList.add("long-name");
+      } else {
+        rightSection.classList.remove("long-name");
+      }
+    }
+
+    // Apply team colors
+    function applyTeamColors() {
+      document.documentElement.style.setProperty('--team-color-left', state.teamAColor);
+      document.documentElement.style.setProperty('--team-color-right', state.teamBColor);
+    }
+
+    function applyBarDimensions() {
+      if (state.barH) document.documentElement.style.setProperty('--bar-h', parseInt(state.barH) + 'px');
+      if (state.barW) document.documentElement.style.setProperty('--bar-w', parseInt(state.barW) + 'px');
+    }
+
+    function applyTypography() {
+      const nameSize = state.teamNameFontSize;
+      const recordSize = state.teamRecordFontSize;
+
+      if (nameSize !== undefined && nameSize !== null && nameSize !== "") {
+        // teamNameFontSize is now a scale factor (0.5–3.0); base is 24px.
+        // Backwards-compat: old configs stored a px value (e.g. 24); detect by value > 5.
+        const rawName = parseFloat(nameSize) || 1.5;
+        const namePx = rawName > 5 ? rawName : Math.round(rawName * 24);
+        document.documentElement.style.setProperty('--team-name-size', `${namePx}px`);
+      }
+
+      if (recordSize !== undefined && recordSize !== null && recordSize !== "") {
+        // teamRecordFontSize is now a scale factor (0.5–3.0); base is 16px.
+        // Backwards-compat: old configs stored a px value (e.g. 16, 25); detect by value > 5.
+        const raw = parseFloat(recordSize) || 1.5;
+        const px = raw > 5 ? raw : Math.round(raw * 16);
+        document.documentElement.style.setProperty('--team-record-size', `${px}px`);
+      }
+    }
+
+    // Parse MM:SS time format to seconds
+    function parseTimeToSeconds(timeStr) {
+      if (!timeStr) return 600;
+      const parts = timeStr.split(':');
+      if (parts.length !== 2) return 600;
+      const minutes = parseInt(parts[0]) || 0;
+      const seconds = parseInt(parts[1]) || 0;
+      return minutes * 60 + seconds;
+    }
+
+    // Format seconds to MM:SS
+    function formatSecondsToTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Rendering functions
+    function setText(id, value, animate = false) {
+      const el = $(id);
+      if (!el) return;
+      
+      const currentValue = el.textContent;
+      const newValue = (value === null || value === undefined) ? "" : String(value);
+      
+      if (animate && (id === "scoreA" || id === "scoreB") && currentValue !== newValue) {
+        el.classList.add("score-update");
+        setTimeout(() => el.classList.remove("score-update"), 400);
+      }
+      
+      el.textContent = newValue;
+      
+      if (id === "teamBName") {
+        setTimeout(checkTeamNameLength, 10);
+      }
+    }
+
+
+    function setImg(id, src) {
+      const el = $(id);
+      if (!el) return;
+      const v = (src === null || src === undefined) ? "" : String(src).trim();
+      el.setAttribute("src", v);
+    }
+
+    function updateClockDisplay() {
+      const clockEl = $("time");
+      // Use local timer state, not config.json state
+      if (state.localClockRunning) {
+        clockEl.classList.remove("paused");
+      } else {
+        clockEl.classList.add("paused");
+      }
+    }
+
+    function applyLogoScales() {
+      [
+        { id: "teamALogo",   scale: state.teamALogoScale   },
+        { id: "teamBLogo",   scale: state.teamBLogoScale   },
+        { id: "sponsorLogo", scale: state.sponsorLogoScale },
+        { id: "leagueLogo",  scale: state.leagueLogoScale  },
+      ].forEach(({ id, scale }) => {
+        const el = $(id);
+        if (!el) return;
+        const raw = parseFloat(scale);
+        const value = Number.isFinite(raw) ? raw : 1;
+
+        // Convert control scale values to pixel sizes.
+        const base = (id === "teamALogo" || id === "teamBLogo") ? 54 : 48;
+        const sizePx = Math.max(20, base + ((value - 1) * 2));
+
+        el.style.width = `${sizePx}px`;
+        el.style.height = `${sizePx}px`;
+        el.style.transform = "";
+      });
+    }
+
+    function autoFitText(el, maxPx, minPx) {
+      if (!el) return;
+      el.style.fontSize = maxPx + "px";
+      let size = maxPx;
+      while (el.scrollWidth > el.clientWidth && size > minPx) {
+        size -= 1;
+        el.style.fontSize = size + "px";
+      }
+    }
+
+    function renderFootballDownDistance(text) {
+      const riserDdEl = $("infoRiserDD");
+      if (!riserDdEl) return;
+
+      const raw = String(text || "").trim().toUpperCase();
+      const isFootball = String(state.sportsType || "").toUpperCase() === "FOOTBALL";
+
+      if (!raw || !isFootball) {
+        riserDdEl.innerHTML = "";
+        riserDdEl.classList.remove("has-dd", "is-special");
+        return;
+      }
+
+      riserDdEl.classList.add("has-dd");
+      riserDdEl.classList.remove("is-special");
+
+      const match = raw.match(/^([1-4](?:ST|ND|RD|TH))\s*&\s*(.+)$/);
+      if (match) {
+        riserDdEl.innerHTML = `<span class="dd-down">${match[1]}</span><span class="dd-sep">&</span><span class="dd-dist">${match[2]}</span>`;
+      } else {
+        riserDdEl.innerHTML = `<span class="dd-down">${raw}</span>`;
+      }
+    }
+
+    function render() {
+      // Template switch: CSS handles visibility based on body[data-sport]
+      document.body.dataset.sport = String(state.sportsType || "").toUpperCase();
+
+      setText("teamAName", state.teamAName);
+      setText("teamBName", state.teamBName);
+      setText("teamARecord", state.teamARecord);
+      setText("teamBRecord", state.teamBRecord);
+      setText("scoreA", state.scoreA, true);
+      setText("scoreB", state.scoreB, true);
+      
+      // Display local timer time
+      setText("time", formatSecondsToTime(state.localClockSeconds));
+      
+      setText("sportsType", state.sportsType);
+      setText("period", state.period);
+      setImg("sponsorLogo", state.sponsorLogo);
+      setImg("leagueLogo", state.leagueLogo);
+      setImg("teamALogo", state.teamALogo);
+      setImg("teamBLogo", state.teamBLogo);
+      
+      updateClockDisplay();
+      updatePlayClockDisplay();
+      checkTeamNameLength();
+      applyTeamColors();
+      applyTypography();
+      applyBarDimensions();
+      applyLogoScales();
+
+      // Visibility toggles
+      const clockEl = $('time');
+      if (clockEl) clockEl.style.display = state.showGameClock ? '' : 'none';
+      const inlineShotClock = $('inlineShotClock');
+      if (inlineShotClock) inlineShotClock.style.display = state.showShotClock ? '' : 'none';
+      const footballDdText = (state.footballDownDistanceText || "").trim();
+      const isFootball = String(state.sportsType || "").toUpperCase() === "FOOTBALL";
+      renderFootballDownDistance(footballDdText);
+
+      // Info riser
+      const riserEl = $('infoRiser');
+      if (riserEl) {
+        riserEl.dataset.hasDd = (isFootball && !!footballDdText) ? "true" : "false";
+        riserEl.dataset.badgePos = state.infoRiserBadgePos || "left";
+        riserEl.dataset.textAlign = state.infoRiserAlign || "center";
+        const badgeEl = riserEl.querySelector('.info-riser-badge');
+        const accentEl = riserEl.querySelector('.info-riser-accent');
+        const showBadge = state.showInfoRiserBadge !== false;
+        const badgeColor = state.infoRiserBadgeColor;
+        if (badgeEl) {
+          badgeEl.textContent = state.infoRiserBadge || "INFO";
+          badgeEl.style.display = showBadge ? '' : 'none';
+          badgeEl.style.background = badgeColor || '';
+        }
+        if (accentEl) {
+          accentEl.style.display = showBadge ? '' : 'none';
+          accentEl.style.background = badgeColor || '';
+          accentEl.style.boxShadow = badgeColor ? `0 0 18px ${badgeColor}cc, 0 0 40px ${badgeColor}59` : '';
+        }
+        riserEl.style.background = state.infoRiserBgColor || '';
+        setText('infoRiserText', state.infoRiserText);
+        const textEl = $('infoRiserText');
+        if (textEl) textEl.style.textAlign = state.infoRiserAlign || "center";
+        if (state.showInfoRiser) riserEl.classList.remove('hidden');
+        else riserEl.classList.add('hidden');
+      }
+
+      const baseNameSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--team-name-size')) || 25;
+
+      autoFitText(document.getElementById("teamAName"), baseNameSize, 12);
+      autoFitText(document.getElementById("teamBName"), baseNameSize, 12);
+      const riserH = parseInt(state.infoRiserHeight) || 50;
+      document.documentElement.style.setProperty('--riser-h', riserH + 'px');
+      const riserMaxPx = parseInt(state.infoRiserFontSize) || 30;
+      autoFitText(document.getElementById("infoRiserText"), riserMaxPx, 11);
+
+      // Timeout dots
+      const _renderDots = (id, remaining, max) => {
+        const el = $(id);
+        if (!el) return;
+        el.innerHTML = '';
+        const safeMax = Math.max(0, Math.min(9, parseInt(max) || 3));
+        const safeRem = Math.max(0, Math.min(safeMax, parseInt(remaining) ?? safeMax));
+        for (let i = 0; i < safeMax; i++) {
+          const dot = document.createElement('span');
+          dot.className = 'timeout-dot' + (i >= safeRem ? ' used' : '');
+          el.appendChild(dot);
+        }
+      };
+      const showDots = state.showTimeoutDots !== false;
+      const dotsAEl = $('timeoutDotsA');
+      const dotsBEl = $('timeoutDotsB');
+      if (dotsAEl) {
+        if (showDots) { _renderDots('timeoutDotsA', state.timeoutsA ?? 3, state.maxTimeoutsA ?? 3); dotsAEl.classList.remove('hidden'); }
+        else dotsAEl.classList.add('hidden');
+      }
+      if (dotsBEl) {
+        if (showDots) { _renderDots('timeoutDotsB', state.timeoutsB ?? 3, state.maxTimeoutsB ?? 3); dotsBEl.classList.remove('hidden'); }
+        else dotsBEl.classList.add('hidden');
+      }
+
+      // Timeout center overlay
+      const tOverlay = $('timeoutCenterOverlay');
+      const tTeamEl = $('timeoutCenterTeam');
+      if (tOverlay) {
+        if (state.showTimeoutBanner && state.timeoutBannerTeam) {
+          const tName = state.timeoutBannerTeam === 'A' ? (state.teamAName || 'HOME')
+                      : state.timeoutBannerTeam === 'B' ? (state.teamBName || 'VISITOR')
+                      : 'SHOT CLOCK';
+          if (tTeamEl) tTeamEl.textContent = tName;
+          tOverlay.classList.remove('hidden');
+        } else {
+          tOverlay.classList.add('hidden');
+        }
+      }
+    }
+
+    // Sync timer state from control panel
+    function syncTimerFromConfig() {
+      // Read time from config.json
+      const configSeconds = parseTimeToSeconds(state.time);
+      
+      // If the control panel timer is running and time has changed, sync to local timer
+      if (state.clockRunning && Math.abs(configSeconds - lastConfigClockSeconds) <= 2) {
+        // Control panel is counting down, start local timer
+        if (!state.localClockRunning) {
+          startLocalTimer(configSeconds);
+        }
+        // Minor correction to local timer to ensure synchronization
+        if (Math.abs(configSeconds - state.localClockSeconds) > 2) {
+          state.localClockSeconds = configSeconds;
+          render();
+        }
+      } else if (!state.clockRunning) {
+        // Control panel is paused, stop local timer and sync time
+        stopLocalTimer();
+        state.localClockSeconds = configSeconds;
+        render();
+      }
+      
+      lastConfigClockSeconds = configSeconds;
+    }
+
+    // Start local timer
+    function startLocalTimer(startSeconds) {
+      if (state.localClockRunning) return;
+      
+      state.localClockRunning = true;
+      state.localClockSeconds = startSeconds || state.localClockSeconds;
+      
+      // Clear existing timer
+      if (localTimer) clearInterval(localTimer);
+      
+      // Start new timer
+      localTimer = setInterval(() => {
+        if (state.localClockSeconds > 0) {
+          state.localClockSeconds--;
+          render();
+        } else {
+          // Time's up
+          stopLocalTimer();
+          render();
+        }
+      }, 1000);
+      
+      render();
+    }
+
+    // Stop local timer
+    function stopLocalTimer() {
+      state.localClockRunning = false;
+      if (localTimer) {
+        clearInterval(localTimer);
+        localTimer = null;
+      }
+      render();
+    }
+
+    // Reset local timer
+    function resetLocalTimer(minutes = 10, seconds = 0) {
+      stopLocalTimer();
+      state.localClockSeconds = minutes * 60 + seconds;
+      render();
+    }
+
+    // ---- Shot clock ----
+    function updatePlayClockDisplay() {
+      const secs = Math.max(0, state.localPlayClockSeconds);
+
+      const isUrgent = state.localPlayClockRunning && secs <= 5;
+      const isPaused = !state.localPlayClockRunning;
+      const stateClass = isUrgent ? "urgent" : isPaused ? "paused" : "";
+
+      // Update inline shot clock in center section
+      const inlineEl = $("inlineShotClockDisplay");
+      if (inlineEl) {
+        inlineEl.textContent = String(secs);
+        inlineEl.classList.remove("paused", "urgent");
+        if (stateClass) inlineEl.classList.add(stateClass);
+      }
+      const inlinePill = $("inlineShotClock");
+      if (inlinePill) {
+        inlinePill.classList.remove("paused", "urgent");
+        if (stateClass) inlinePill.classList.add(stateClass);
+      }
+    }
+
+    function startLocalPlayClock(startSeconds) {
+      if (state.localPlayClockRunning) return;
+      state.localPlayClockRunning = true;
+      if (startSeconds !== undefined) {
+        state.localPlayClockSeconds = startSeconds;
+        if (startSeconds > 0) shotClockMaxSeconds = startSeconds;
+      }
+      if (playClockTimer) clearInterval(playClockTimer);
+      playClockTimer = setInterval(() => {
+        if (state.localPlayClockSeconds > 0) {
+          state.localPlayClockSeconds--;
+          updatePlayClockDisplay();
+        } else {
+          stopLocalPlayClock();
+        }
+      }, 1000);
+      updatePlayClockDisplay();
+    }
+
+    function stopLocalPlayClock() {
+      state.localPlayClockRunning = false;
+      if (playClockTimer) {
+        clearInterval(playClockTimer);
+        playClockTimer = null;
+      }
+      updatePlayClockDisplay();
+    }
+
+    function syncPlayClockFromConfig() {
+      const configRunning = !!state.playClockRunning;
+      const configSeconds = parseInt(state.playClockSeconds) || 0;
+
+      if (configRunning && Math.abs(configSeconds - lastConfigPlayClockSeconds) <= 2) {
+        if (!state.localPlayClockRunning) {
+          startLocalPlayClock(configSeconds);
+        }
+        if (Math.abs(configSeconds - state.localPlayClockSeconds) > 2) {
+          state.localPlayClockSeconds = configSeconds;
+          updatePlayClockDisplay();
+        }
+      } else if (!configRunning) {
+        stopLocalPlayClock();
+        if (configSeconds > 0 && (configSeconds > state.localPlayClockSeconds || state.localPlayClockSeconds === 0)) {
+          shotClockMaxSeconds = configSeconds;
+        }
+        state.localPlayClockSeconds = configSeconds;
+        updatePlayClockDisplay();
+      }
+      lastConfigPlayClockSeconds = configSeconds;
+    }
+
+    // Public API
+    function set(partial) {
+      if (!partial || typeof partial !== "object") return;
+
+      for (const k of Object.keys(state)) {
+        if (k in partial) state[k] = partial[k];
+      }
+      
+      // Sync timer state
+      syncTimerFromConfig();
+      syncPlayClockFromConfig();
+
+      render();
+    }
+
+    function getState() {
+      return { ...state };
+    }
+
+    // Config Loader
+    async function loadConfig() {
+      try {
+        const res = await fetch("config.json?ts=" + Date.now());
+        const cfg = await res.json();
+
+        const updates = {
+          teamAName: cfg.teamAName,
+          teamBName: cfg.teamBName,
+          teamARecord: cfg.teamARecord,
+          teamBRecord: cfg.teamBRecord,
+          scoreA: cfg.scoreA,
+          scoreB: cfg.scoreB,
+          time: cfg.startTime || cfg.time,
+          period: cfg.period,
+          sportsType: cfg.sportsType,
+          teamALogo: cfg.teamALogo,
+          teamBLogo: cfg.teamBLogo,
+          sponsorLogo: cfg.sponsorLogo,
+          leagueLogo: cfg.leagueLogo,
+          teamAColor: cfg.teamAColor,
+          teamBColor: cfg.teamBColor,
+          clockRunning: cfg.clockRunning,
+          teamNameFontSize: cfg.teamNameFontSize,
+          teamRecordFontSize: cfg.teamRecordFontSize,
+          teamALogoScale: cfg.teamALogoScale,
+          teamBLogoScale: cfg.teamBLogoScale,
+          sponsorLogoScale: cfg.sponsorLogoScale,
+          leagueLogoScale: cfg.leagueLogoScale,
+          playClockSeconds: cfg.playClockSeconds,
+          playClockRunning: cfg.playClockRunning,
+          showGameClock: cfg.showGameClock !== undefined ? cfg.showGameClock : true,
+          showShotClock: cfg.showShotClock !== undefined ? cfg.showShotClock : true,
+          barH: cfg.barH,
+          barW: cfg.barW,
+          infoRiserBadge: cfg.infoRiserBadge,
+          infoRiserBadgeColor: cfg.infoRiserBadgeColor,
+          infoRiserBgColor: cfg.infoRiserBgColor,
+          infoRiserBadgePos: cfg.infoRiserBadgePos,
+          showInfoRiserBadge: cfg.showInfoRiserBadge !== undefined ? cfg.showInfoRiserBadge : true,
+          infoRiserText: cfg.infoRiserText,
+          infoRiserAlign: cfg.infoRiserAlign,
+          showInfoRiser: cfg.showInfoRiser !== undefined ? cfg.showInfoRiser : false,
+          infoRiserFontSize: cfg.infoRiserFontSize,
+          infoRiserHeight: cfg.infoRiserHeight,
+          timeoutsA: cfg.timeoutsA !== undefined ? cfg.timeoutsA : 3,
+          timeoutsB: cfg.timeoutsB !== undefined ? cfg.timeoutsB : 3,
+          maxTimeoutsA: cfg.maxTimeoutsA !== undefined ? cfg.maxTimeoutsA : 3,
+          maxTimeoutsB: cfg.maxTimeoutsB !== undefined ? cfg.maxTimeoutsB : 3,
+          showTimeoutDots: cfg.showTimeoutDots !== undefined ? cfg.showTimeoutDots : true,
+          showTimeoutBanner: cfg.showTimeoutBanner !== undefined ? cfg.showTimeoutBanner : false,
+          timeoutBannerTeam: cfg.timeoutBannerTeam || "",
+          footballDownDistanceText: cfg.footballDownDistanceText || "",
+        };
+
+        // Remove undefined values
+        Object.keys(updates).forEach(key => {
+          if (updates[key] === undefined) delete updates[key];
+        });
+
+        set(updates);
+
+      } catch (e) {
+        console.debug("Config load failed");
+      }
+    }
+
+    // Initialize
+    window.VSSScoreboard = {
+      set,
+      getState,
+      clock: {
+        start: (minutes, seconds) => startLocalTimer((minutes || 10) * 60 + (seconds || 0)),
+        stop: stopLocalTimer,
+        reset: resetLocalTimer
+      },
+      loadConfig
+    };
+
+    // Initial render and config load
+    render();
+    loadConfig();
+    
+    // Check for config.json updates more frequently (4 times per second to reduce delay)
+    setInterval(loadConfig, 250);
+  </script>
+</body>
+</html>
